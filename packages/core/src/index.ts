@@ -48,6 +48,187 @@ export class PageBoxService {
     return folder;
   }
 
+  async renameFolder(id: Id, name: string): Promise<Folder> {
+    const store = await this.repo.getStore();
+    const folder = store.folders.find((f) => f.id === id);
+    if (!folder) throw new Error("文件夹不存在");
+    folder.name = name.trim() || folder.name;
+    folder.updatedAt = now();
+    await this.repo.saveStore(store);
+    return folder;
+  }
+
+  async deleteFolder(id: Id, deleteTabs = false): Promise<void> {
+    const store = await this.repo.getStore();
+    const folder = store.folders.find((f) => f.id === id);
+    if (!folder) throw new Error("文件夹不存在");
+
+    // 递归收集所有待删除的子文件夹 ID
+    const folderIdsToDelete = new Set<Id>([id]);
+    let added = true;
+    while (added) {
+      added = false;
+      for (const f of store.folders) {
+        if (f.parentId && folderIdsToDelete.has(f.parentId) && !folderIdsToDelete.has(f.id)) {
+          folderIdsToDelete.add(f.id);
+          added = true;
+        }
+      }
+    }
+
+    if (deleteTabs) {
+      // 级联删除属于这些文件夹的标签和窗口
+      store.tabs = store.tabs.filter((t) => !t.folderId || !folderIdsToDelete.has(t.folderId));
+      store.windows = store.windows.filter((w) => !w.folderId || !folderIdsToDelete.has(w.folderId));
+    } else {
+      // 保留标签和窗口，移动到未分类 (folderId = null)
+      for (const t of store.tabs) {
+        if (t.folderId && folderIdsToDelete.has(t.folderId)) {
+          t.folderId = null;
+          t.updatedAt = now();
+        }
+      }
+      for (const w of store.windows) {
+        if (w.folderId && folderIdsToDelete.has(w.folderId)) {
+          w.folderId = null;
+          w.updatedAt = now();
+        }
+      }
+    }
+
+    // 移除文件夹
+    store.folders = store.folders.filter((f) => !folderIdsToDelete.has(f.id));
+    await this.repo.saveStore(store);
+  }
+
+  async moveTabToFolder(tabId: Id, targetFolderId: Id | null): Promise<SavedTab> {
+    const store = await this.repo.getStore();
+    const tab = store.tabs.find((t) => t.id === tabId);
+    if (!tab) throw new Error("标签不存在");
+    tab.folderId = targetFolderId;
+    const existing = store.tabs.filter((t) => t.folderId === targetFolderId && t.id !== tabId);
+    tab.sortOrder = existing.length;
+    tab.updatedAt = now();
+    await this.repo.saveStore(store);
+    return tab;
+  }
+
+  async moveTabsToFolder(tabIds: Id[], targetFolderId: Id | null): Promise<void> {
+    const store = await this.repo.getStore();
+    const idSet = new Set(tabIds);
+    const existingCount = store.tabs.filter(
+      (t) => t.folderId === targetFolderId && !idSet.has(t.id),
+    ).length;
+    let added = 0;
+    const timestamp = now();
+    for (const tab of store.tabs) {
+      if (idSet.has(tab.id)) {
+        tab.folderId = targetFolderId;
+        tab.sortOrder = existingCount + added;
+        tab.updatedAt = timestamp;
+        added++;
+      }
+    }
+    await this.repo.saveStore(store);
+  }
+
+  async reorderTabs(orderedTabIds: Id[]): Promise<void> {
+    const store = await this.repo.getStore();
+    const idToIndex = new Map<Id, number>();
+    orderedTabIds.forEach((id, index) => idToIndex.set(id, index));
+    const timestamp = now();
+    for (const tab of store.tabs) {
+      if (idToIndex.has(tab.id)) {
+        tab.sortOrder = idToIndex.get(tab.id);
+        tab.updatedAt = timestamp;
+      }
+    }
+    await this.repo.saveStore(store);
+  }
+
+  async reorderFolders(parentId: Id | null, orderedFolderIds: Id[]): Promise<void> {
+    const store = await this.repo.getStore();
+    const idToIndex = new Map<Id, number>();
+    orderedFolderIds.forEach((id, index) => idToIndex.set(id, index));
+    const timestamp = now();
+    for (const folder of store.folders) {
+      if (folder.parentId === parentId && idToIndex.has(folder.id)) {
+        folder.sortOrder = idToIndex.get(folder.id)!;
+        folder.updatedAt = timestamp;
+      }
+    }
+    await this.repo.saveStore(store);
+  }
+
+  async moveFolder(
+    sourceFolderId: Id,
+    targetFolderId: Id,
+    position: "before" | "after" | "inside" = "inside",
+  ): Promise<Folder> {
+    const store = await this.repo.getStore();
+    const sourceFolder = store.folders.find((f) => f.id === sourceFolderId);
+    const targetFolder = store.folders.find((f) => f.id === targetFolderId);
+    if (!sourceFolder) throw new Error("源文件夹不存在");
+    if (!targetFolder) throw new Error("目标文件夹不存在");
+
+    if (sourceFolderId === targetFolderId) {
+      return sourceFolder;
+    }
+
+    // 防止循环嵌套：targetFolder 不能是 sourceFolder 自身或其子孙文件夹
+    let cur: Folder | undefined = targetFolder;
+    while (cur) {
+      if (cur.id === sourceFolderId) {
+        throw new Error("不能将文件夹移动到其子文件夹中");
+      }
+      cur = cur.parentId ? store.folders.find((f) => f.id === cur?.parentId) : undefined;
+    }
+
+    const timestamp = now();
+
+    if (position === "inside") {
+      // 塞入目标文件夹内部
+      sourceFolder.parentId = targetFolder.id;
+      sourceFolder.updatedAt = timestamp;
+      const siblings = store.folders
+        .filter((f) => f.parentId === targetFolder.id && f.id !== sourceFolderId)
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+      sourceFolder.sortOrder = siblings.length;
+      await this.repo.saveStore(store);
+      return sourceFolder;
+    }
+
+    // 同级排序：保持在 targetFolder 相同的父级目录下，插入在其前或后
+    const targetParentId = targetFolder.parentId;
+    sourceFolder.parentId = targetParentId;
+    sourceFolder.updatedAt = timestamp;
+
+    const siblings = store.folders
+      .filter((f) => f.parentId === targetParentId && f.id !== sourceFolderId)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    const targetIdx = siblings.findIndex((f) => f.id === targetFolder.id);
+    const insertIdx = position === "before" ? Math.max(0, targetIdx) : targetIdx + 1;
+
+    siblings.splice(insertIdx, 0, sourceFolder);
+    siblings.forEach((f, idx) => {
+      f.sortOrder = idx;
+    });
+
+    await this.repo.saveStore(store);
+    return sourceFolder;
+  }
+
+  async moveWindowToFolder(windowId: Id, targetFolderId: Id | null): Promise<SavedWindow> {
+    const store = await this.repo.getStore();
+    const win = store.windows.find((w) => w.id === windowId);
+    if (!win) throw new Error("窗口不存在");
+    win.folderId = targetFolderId;
+    win.updatedAt = now();
+    await this.repo.saveStore(store);
+    return win;
+  }
+
   async saveTab(input: {
     title: string;
     url: string;
@@ -58,14 +239,17 @@ export class PageBoxService {
   }): Promise<SavedTab> {
     const store = await this.repo.getStore();
     const timestamp = now();
+    const targetFolderId = input.folderId ?? null;
+    const existingInFolder = store.tabs.filter((t) => t.folderId === targetFolderId);
     const tab: SavedTab = {
       id: createId(),
-      folderId: input.folderId ?? null,
+      folderId: targetFolderId,
       title: input.title,
       url: input.url,
       favIconUrl: input.favIconUrl,
       notes: input.notes,
       tags: input.tags ?? [],
+      sortOrder: existingInFolder.length,
       createdAt: timestamp,
       updatedAt: timestamp,
     };
@@ -100,12 +284,15 @@ export class PageBoxService {
   }): Promise<SavedWindow> {
     const store = await this.repo.getStore();
     const timestamp = now();
+    const targetFolderId = input.folderId ?? null;
+    const existingInFolder = store.windows.filter((w) => w.folderId === targetFolderId);
     const savedWindow: SavedWindow = {
       id: createId(),
-      folderId: input.folderId ?? null,
+      folderId: targetFolderId,
       name: input.name,
       notes: input.notes,
       tags: input.tags ?? [],
+      sortOrder: existingInFolder.length,
       createdAt: timestamp,
       updatedAt: timestamp,
       tabs: input.tabs
@@ -223,3 +410,20 @@ export class PageBoxService {
 
 export const pageBoxService = new PageBoxService();
 export { BookmarkSyncService, bookmarkSyncService } from "./bookmark-sync";
+export type { SyncToBrowserOptions } from "./bookmark-sync";
+
+
+/** 打开或激活全屏管理大页 */
+export async function openManagerPage(): Promise<void> {
+  const url = chrome.runtime.getURL("manager.html");
+  const tabs = await chrome.tabs.query({});
+  const existing = tabs.find((t) => t.url === url || t.url?.startsWith(url));
+  if (existing?.id !== undefined) {
+    await chrome.tabs.update(existing.id, { active: true });
+    if (existing.windowId !== undefined) {
+      await chrome.windows.update(existing.windowId, { focused: true });
+    }
+  } else {
+    await chrome.tabs.create({ url, active: true });
+  }
+}

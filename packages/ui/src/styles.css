@@ -125,6 +125,83 @@ textarea {
   letter-spacing: 0.04em;
 }
 
+.pagebox-tree {
+  padding-bottom: 8px;
+}
+
+.pagebox-tree-folder__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 16px 8px 12px;
+  border: none;
+  background: transparent;
+  color: #344054;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.pagebox-tree-folder__header:hover {
+  background: #f2f4f7;
+}
+
+.pagebox-tree-folder__chevron {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  display: inline-block;
+  border-right: 2px solid #98a2b3;
+  border-bottom: 2px solid #98a2b3;
+  transform: rotate(-45deg);
+  margin-top: -2px;
+  transition: transform 0.15s;
+}
+
+.pagebox-tree-folder__chevron.is-open {
+  transform: rotate(45deg);
+  margin-top: 2px;
+}
+
+.pagebox-tree-folder__icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.pagebox-tree-folder__name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pagebox-tree-folder__count {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #98a2b3;
+}
+
+.pagebox-tree-item {
+  padding-right: 16px;
+}
+
+.pagebox-tree-item__dot {
+  width: 6px;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: #c7cdd8;
+  flex-shrink: 0;
+}
+
+.pagebox-tree-uncategorized {
+  margin-top: 4px;
+  border-top: 1px solid #eef0f4;
+}
+
 .pagebox-item {
   display: flex;
   align-items: flex-start;
@@ -257,3 +334,1029 @@ textarea {
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* 按钮高亮样式（打开管理大页） */
+.pagebox-btn--highlight {
+  background: #e0e7ff;
+  color: #4338ca;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagebox-btn--highlight:hover {
+  background: #c7d2fe;
+}
+
+.pagebox-btn--sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.pagebox-btn--danger {
+  color: #a80000;
+}
+
+.pagebox-btn--danger:hover {
+  background: #fde7e9;
+  border-color: #a80000;
+}
+
+/* ==========================================================================
+   Windows 11 资源管理器风格目录展开树 (FolderTree)
+   ========================================================================== */
+
+.pagebox-explorer-tree {
+  user-select: none;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  padding: 4px 0;
+}
+
+.pagebox-tree-node {
+  display: flex;
+  flex-direction: column;
+}
+
+.pagebox-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding-right: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #202020;
+  transition: background 0.1s ease;
+  position: relative;
+}
+
+.pagebox-tree-row:hover {
+  background: #f3f2f1;
+}
+
+.pagebox-tree-row.is-selected {
+  background: #e5f1fb;
+  color: #005a9e;
+  font-weight: 500;
+}
+
+.pagebox-tree-row.is-drop-inside,
+.pagebox-tree-row--drop-target {
+  background: #e0f2fe !important;
+  outline: 2px dashed #0284c7 !important;
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+.pagebox-tree-row.is-drop-before::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: #0078d4;
+  border-radius: 2px;
+  z-index: 25;
+  box-shadow: 0 0 4px rgba(0, 120, 212, 0.6);
+}
+
+.pagebox-tree-row.is-drop-after::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: #0078d4;
+  border-radius: 2px;
+  z-index: 25;
+  box-shadow: 0 0 4px rgba(0, 120, 212, 0.6);
+}
+
+.pagebox-tree-chevron {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #605e5c;
+  padding: 0;
+  border-radius: 3px;
+  flex-shrink: 0;
+  transition: background 0.1s;
+}
+
+.pagebox-tree-chevron:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.pagebox-tree-chevron-placeholder {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.pagebox-tree-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.pagebox-tree-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+}
+
+.pagebox-tree-count {
+  font-size: 11px;
+  color: #8a8886;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.pagebox-tree-hover-actions {
+  display: none;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.pagebox-tree-row:hover .pagebox-tree-hover-actions {
+  display: flex;
+}
+
+.pagebox-tree-hover-actions button {
+  border: none;
+  background: transparent;
+  padding: 2px 4px;
+  cursor: pointer;
+  border-radius: 3px;
+  color: #605e5c;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.pagebox-tree-hover-actions button:hover {
+  background: #e1dfdd;
+  color: #202020;
+}
+
+.pagebox-tree-children {
+  display: flex;
+  flex-direction: column;
+}
+
+.pagebox-tree-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding-right: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.1s ease;
+}
+
+.pagebox-tree-item:hover {
+  background: #f3f2f1;
+}
+
+.pagebox-tree-item__chevron-spacer {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.pagebox-tree-item__favicon {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.pagebox-tree-item__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #a19f9d;
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+
+.pagebox-tree-item__win-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.pagebox-tree-item__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.pagebox-tree-item__title {
+  font-size: 12px;
+  color: #323130;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pagebox-tree-item__url {
+  font-size: 11px;
+  color: #8a8886;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pagebox-tree-item__notes {
+  font-size: 11px;
+  color: #0078d4;
+  margin-top: 1px;
+}
+
+.pagebox-tree-item__actions {
+  display: none;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.pagebox-tree-item:hover .pagebox-tree-item__actions {
+  display: flex;
+}
+
+.pagebox-tree-item__actions button {
+  border: none;
+  background: transparent;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+  color: #605e5c;
+}
+
+.pagebox-tree-item__actions button:hover {
+  background: #e1dfdd;
+  color: #0078d4;
+}
+
+.pagebox-tree-uncategorized-section {
+  margin-top: 4px;
+  border-top: 1px solid #edebe9;
+  padding-top: 4px;
+}
+
+/* ==========================================================================
+   全屏管理大页 (ManagerApp) 布局与样式
+   ========================================================================== */
+
+.pagebox-manager {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #faf9f8;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  color: #202020;
+  overflow: hidden;
+}
+
+.pagebox-manager__header {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e1dfdd;
+  gap: 20px;
+  flex-shrink: 0;
+}
+
+.pagebox-manager__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagebox-manager__logo {
+  font-size: 20px;
+}
+
+.pagebox-manager__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #202020;
+}
+
+.pagebox-manager__search-box {
+  flex: 1;
+  max-width: 480px;
+}
+
+.pagebox-manager__search-box input {
+  width: 100%;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid #8a8886;
+  border-radius: 4px;
+  font-size: 13px;
+  background: #f3f2f1;
+  outline: none;
+  transition: all 0.15s;
+}
+
+.pagebox-manager__search-box input:focus {
+  background: #ffffff;
+  border-color: #0078d4;
+  box-shadow: 0 0 0 1px #0078d4;
+}
+
+.pagebox-manager__top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagebox-manager__layout {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* 左侧 Windows 资源管理器侧边栏 */
+.pagebox-manager__sidebar {
+  width: 290px;
+  min-width: 250px;
+  max-width: 380px;
+  background: #f3f2f1;
+  border-right: 1px solid #e1dfdd;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 8px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.pagebox-sidebar__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: #605e5c;
+  padding: 8px 8px 4px;
+  letter-spacing: 0.4px;
+}
+
+.pagebox-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.pagebox-sidebar__nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #323130;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.pagebox-sidebar__nav-item:hover {
+  background: #e1dfdd;
+}
+
+.pagebox-sidebar__nav-item.is-active {
+  background: #e5f1fb;
+  color: #005a9e;
+  font-weight: 600;
+}
+
+.pagebox-sidebar__nav-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pagebox-sidebar__nav-badge {
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 6px;
+  border-radius: 10px;
+  color: #605e5c;
+}
+
+.pagebox-sidebar__add-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #605e5c;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.pagebox-sidebar__add-btn:hover {
+  background: #e1dfdd;
+  color: #202020;
+}
+
+.pagebox-sidebar__tree-container {
+  flex: 1;
+}
+
+/* 右侧主工作区 */
+.pagebox-manager__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  overflow-y: auto;
+}
+
+.pagebox-content__breadcrumb-bar {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid #edebe9;
+  background: #faf9f8;
+  flex-shrink: 0;
+}
+
+.pagebox-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #605e5c;
+}
+
+.pagebox-breadcrumbs__root {
+  font-weight: 600;
+  color: #323130;
+}
+
+.pagebox-breadcrumbs__crumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagebox-content__folder-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagebox-batch-bar {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: #f0f6fc;
+  border-bottom: 1px solid #d2e3f8;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.pagebox-batch-bar__select-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+}
+
+.pagebox-batch-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pagebox-batch-bar__count {
+  font-weight: 600;
+  color: #005a9e;
+}
+
+.pagebox-batch-bar__move select {
+  height: 26px;
+  font-size: 12px;
+  border: 1px solid #8a8886;
+  border-radius: 4px;
+  padding: 0 8px;
+  background: #ffffff;
+}
+
+.pagebox-content__list-container {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.pagebox-manager__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+  color: #8a8886;
+}
+
+.pagebox-empty__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323130;
+  margin: 14px 0 6px;
+}
+
+.pagebox-empty__subtitle {
+  font-size: 13px;
+  color: #8a8886;
+  margin: 0;
+}
+
+.pagebox-list-section {
+  margin-bottom: 24px;
+}
+
+.pagebox-list-section__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #323130;
+  margin: 0 0 10px;
+}
+
+.pagebox-tab-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #edebe9;
+  border-radius: 4px;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.pagebox-tab-row:hover {
+  background: #f8f9fa;
+}
+
+.pagebox-tab-row.is-selected {
+  background: #e5f1fb;
+}
+
+.pagebox-tab-row.is-dragging {
+  opacity: 0.35;
+  background: #f3f2f1;
+}
+
+.pagebox-tab-row.is-drop-before::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 8px;
+  right: 8px;
+  height: 3px;
+  background: #0078d4;
+  border-radius: 2px;
+  z-index: 20;
+  box-shadow: 0 0 6px rgba(0, 120, 212, 0.4);
+}
+
+.pagebox-tab-row.is-drop-after::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 8px;
+  right: 8px;
+  height: 3px;
+  background: #0078d4;
+  border-radius: 2px;
+  z-index: 20;
+  box-shadow: 0 0 6px rgba(0, 120, 212, 0.4);
+}
+
+.pagebox-tab-row__drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a19f9d;
+  cursor: grab;
+  padding: 4px 2px;
+  border-radius: 3px;
+  user-select: none;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.pagebox-tab-row__drag-handle:hover {
+  color: #202020;
+  background: #edebe9;
+}
+
+.pagebox-tab-row__drag-handle:active {
+  cursor: grabbing;
+}
+
+.pagebox-tab-row__checkbox {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.pagebox-tab-row__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.pagebox-tab-row__icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+
+.pagebox-tab-row__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a19f9d;
+  flex-shrink: 0;
+}
+
+.pagebox-tab-row__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.pagebox-tab-row__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #202020;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pagebox-tab-row__url {
+  font-size: 12px;
+  color: #605e5c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pagebox-tab-row__notes {
+  font-size: 11px;
+  color: #0078d4;
+  margin-top: 2px;
+}
+
+.pagebox-tab-row__folder-tag {
+  width: 130px;
+  flex-shrink: 0;
+}
+
+.folder-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #fff4ce;
+  border-radius: 12px;
+  color: #795b00;
+  cursor: pointer;
+  font-size: 11px;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.folder-badge--none {
+  background: #edebe9;
+  color: #605e5c;
+  cursor: default;
+}
+
+.pagebox-tab-row__actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.pagebox-tab-row:hover .pagebox-tab-row__actions {
+  opacity: 1;
+}
+
+.pagebox-action-btn {
+  padding: 3px 8px;
+  border: 1px solid #d2d0ce;
+  border-radius: 4px;
+  background: #ffffff;
+  font-size: 11px;
+  cursor: pointer;
+  color: #323130;
+}
+
+.pagebox-action-btn:hover {
+  background: #f3f2f1;
+  border-color: #a19f9d;
+}
+
+.pagebox-action-btn--danger:hover {
+  background: #fde7e9;
+  border-color: #a80000;
+  color: #a80000;
+}
+
+.pagebox-window-card {
+  border: 1px solid #e1dfdd;
+  border-radius: 6px;
+  padding: 12px 16px;
+  background: #ffffff;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.pagebox-window-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.pagebox-window-card__count {
+  font-size: 12px;
+  color: #605e5c;
+  margin-left: auto;
+}
+
+.pagebox-window-card__tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.pagebox-window-card__tab-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #323130;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.preview-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.pagebox-window-card__more {
+  font-size: 11px;
+  color: #8a8886;
+  margin-top: 2px;
+}
+
+.pagebox-window-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.pagebox-manager__status-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 28px;
+  background: #323130;
+  color: #ffffff;
+  padding: 9px 18px;
+  border-radius: 6px;
+  font-size: 13px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  z-index: 999;
+}
+
+.pagebox-modal__tip {
+  font-size: 12px;
+  color: #605e5c;
+  margin: 0 0 10px;
+}
+
+.pagebox-folder-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+
+.pagebox-folder-select-item {
+  text-align: left;
+  padding: 8px 12px;
+  border: 1px solid #edebe9;
+  border-radius: 4px;
+  background: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.pagebox-folder-select-item:hover {
+  background: #f3f2f1;
+  border-color: #0078d4;
+}
+
+/* ==========================================================================
+   书签双向同步中心 (SyncModal) 样式
+   ========================================================================== */
+
+.pagebox-sync-modal {
+  width: min(620px, 94vw);
+  max-width: 620px;
+  padding: 24px;
+  border-radius: 12px;
+}
+
+.pagebox-sync-modal__header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: #202020;
+}
+
+.pagebox-sync-modal__subtitle {
+  font-size: 13px;
+  color: #605e5c;
+  margin: 0 0 16px;
+  line-height: 1.4;
+}
+
+.pagebox-sync-modal__error {
+  background: #fde7e9;
+  border: 1px solid #a80000;
+  color: #a80000;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.pagebox-sync-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 520px) {
+  .pagebox-sync-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pagebox-sync-card {
+  border: 1px solid #e1dfdd;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  background: #faf9f8;
+  transition: all 0.15s ease;
+}
+
+.pagebox-sync-card:hover {
+  border-color: #0078d4;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: #ffffff;
+}
+
+.pagebox-sync-card__direction {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  width: fit-content;
+}
+
+.pagebox-sync-card__direction--pull {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.pagebox-sync-card__direction--push {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.pagebox-sync-card__title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: #202020;
+}
+
+.pagebox-sync-card__desc {
+  font-size: 12px;
+  color: #605e5c;
+  margin: 0 0 14px;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.pagebox-sync-card__options {
+  margin-bottom: 14px;
+}
+
+.pagebox-sync-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  color: #605e5c;
+  line-height: 1.4;
+}
+
+.pagebox-sync-checkbox input {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.pagebox-sync-card__action {
+  margin-top: auto;
+}
+
+.pagebox-sync-card__warn-box {
+  background: #fff8e6;
+  border: 1px solid #ffd04b;
+  color: #8c6b00;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.pagebox-btn--overwrite {
+  background: #d97706;
+  border-color: #d97706;
+}
+
+.pagebox-btn--overwrite:hover {
+  background: #b45309;
+  border-color: #b45309;
+}
+
+.pagebox-sync-card__action button {
+  width: 100%;
+}
+
+.pagebox-sync-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+
+

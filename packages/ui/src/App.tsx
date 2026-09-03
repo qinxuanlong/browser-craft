@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { bookmarkSyncService, pageBoxService } from "@pagebox/core";
-import type { SavedTab, SavedWindow } from "@pagebox/types";
+import { openManagerPage, pageBoxService } from "@pagebox/core";
+import type { Folder, SavedTab, SavedWindow } from "@pagebox/types";
+import { FolderTree } from "./FolderTree";
+import { SyncModal } from "./SyncModal";
+import { ExternalLinkIcon } from "./icons";
 import "./styles.css";
 
 export type AppVariant = "popup" | "sidepanel";
@@ -12,14 +15,17 @@ interface PageBoxAppProps {
 export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
   const [query, setQuery] = useState("");
   const [tabs, setTabs] = useState<SavedTab[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [windows, setWindows] = useState<SavedWindow[]>([]);
   const [status, setStatus] = useState("");
   const [notesTarget, setNotesTarget] = useState<SavedTab | null>(null);
   const [notesDraft, setNotesDraft] = useState("");
-  const [syncing, setSyncing] = useState(false);
+  const [syncModalOpen, setSyncModalOpen] = useState(false);
 
   const refresh = useCallback(async () => {
+    const store = await pageBoxService.getStore();
     const result = await pageBoxService.search(query);
+    setFolders(store.folders);
     setTabs(result.tabs);
     setWindows(result.windows);
   }, [query]);
@@ -119,22 +125,6 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
     input.click();
   };
 
-  const handleSyncBookmarks = async () => {
-    setSyncing(true);
-    try {
-      const result = await bookmarkSyncService.syncFromBrowser();
-      showStatus(
-        `已同步 ${result.imported} 个书签` +
-          (result.skipped ? `，跳过 ${result.skipped} 个无效项` : ""),
-      );
-      await refresh();
-    } catch (error) {
-      showStatus(error instanceof Error ? error.message : "同步失败");
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   const openNotes = (tab: SavedTab) => {
     setNotesTarget(tab);
     setNotesDraft(tab.notes ?? "");
@@ -149,6 +139,7 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
   };
 
   const isEmpty = tabs.length === 0 && windows.length === 0;
+  const isSearching = query.trim().length > 0;
 
   return (
     <div className={`pagebox-app pagebox-app--${variant}`}>
@@ -169,8 +160,19 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
         <button className="pagebox-btn" onClick={handleImport}>
           导入
         </button>
-        <button className="pagebox-btn" disabled={syncing} onClick={handleSyncBookmarks}>
-          {syncing ? "同步中…" : "同步书签"}
+        <button
+          className="pagebox-btn"
+          onClick={() => setSyncModalOpen(true)}
+          title="打开书签双向同步中心（浏览器 ⇄ 插件）"
+        >
+          双向同步
+        </button>
+        <button
+          className="pagebox-btn pagebox-btn--highlight"
+          onClick={() => void openManagerPage()}
+          title="在新标签页中打开完整管理中心"
+        >
+          <ExternalLinkIcon size={12} /> 管理页
         </button>
         {variant === "popup" && (
           <button
@@ -209,7 +211,7 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
           </div>
         )}
 
-        {windows.length > 0 && (
+        {isSearching && windows.length > 0 && (
           <>
             <div className="pagebox-section-title">窗口 ({windows.length})</div>
             {windows.map((win) => (
@@ -229,23 +231,39 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
 
         {tabs.length > 0 && (
           <>
-            <div className="pagebox-section-title">标签页 ({tabs.length})</div>
-            {tabs.map((tab) => (
-              <div key={tab.id} className="pagebox-item" onClick={() => handleRestoreTab(tab)}>
-                {tab.favIconUrl && (
-                  <img className="pagebox-item__icon" src={tab.favIconUrl} alt="" />
-                )}
-                <div className="pagebox-item__body">
-                  <div className="pagebox-item__title">{tab.title}</div>
-                  <div className="pagebox-item__url">{tab.url}</div>
-                  {tab.notes && <div className="pagebox-item__notes">{tab.notes}</div>}
+            <div className="pagebox-section-title">
+              {isSearching ? `搜索结果 (${tabs.length})` : `收藏目录树 (${tabs.length})`}
+            </div>
+            {isSearching ? (
+              tabs.map((tab) => (
+                <div key={tab.id} className="pagebox-item" onClick={() => handleRestoreTab(tab)}>
+                  {tab.favIconUrl && (
+                    <img className="pagebox-item__icon" src={tab.favIconUrl} alt="" />
+                  )}
+                  <div className="pagebox-item__body">
+                    <div className="pagebox-item__title">{tab.title}</div>
+                    <div className="pagebox-item__url">{tab.url}</div>
+                    {tab.notes && <div className="pagebox-item__notes">{tab.notes}</div>}
+                  </div>
+                  <div className="pagebox-item__actions" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => openNotes(tab)}>备注</button>
+                    <button onClick={() => handleDeleteTab(tab)}>删除</button>
+                  </div>
                 </div>
-                <div className="pagebox-item__actions" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => openNotes(tab)}>备注</button>
-                  <button onClick={() => handleDeleteTab(tab)}>删除</button>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <FolderTree
+                folders={folders}
+                tabs={tabs}
+                windows={windows}
+                mode="full"
+                onRestoreTab={handleRestoreTab}
+                onDeleteTab={handleDeleteTab}
+                onOpenNotes={openNotes}
+                onRestoreWindow={handleRestoreWindow}
+                onDeleteWindow={handleDeleteWindow}
+              />
+            )}
           </>
         )}
       </main>
@@ -272,6 +290,16 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
           </div>
         </div>
       )}
+
+      {/* 书签双向同步中心弹窗 */}
+      <SyncModal
+        isOpen={syncModalOpen}
+        onClose={() => setSyncModalOpen(false)}
+        onSuccess={(msg) => {
+          showStatus(msg);
+          void refresh();
+        }}
+      />
     </div>
   );
 }

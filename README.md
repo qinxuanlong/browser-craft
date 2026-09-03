@@ -55,9 +55,15 @@ pnpm build
 
 Popup 中点击「侧边栏」按钮，或在 Chrome 工具栏右键扩展图标选择 Side Panel。
 
+## 需求说明与规划
+
+详细功能需求说明书请参见 [REQUIREMENTS.md](file:///d:/1Aworker/tool/oneclick/PageBox/REQUIREMENTS.md)。
+
 ## 后续规划
 
-- [ ] 文件夹 UI（`core` 已支持 `createFolder`）
-- [ ] 标签（tags）编辑
-- [ ] 拖拽排序
+- [x] 文件夹树状展示（`FolderTree` 折叠树与未分类统计）
+- [ ] 文件夹前端管理（UI 新建、重命名、删除）
+- [ ] 标签（tags）编辑与筛选
+- [ ] 拖拽排序（Drag & Drop）
 - [ ] 云端同步接口预留
+

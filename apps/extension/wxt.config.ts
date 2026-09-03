@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import { defineConfig } from "wxt";
 
 function fixExtensionHtmlPaths(outDir: string) {
-  for (const file of ["popup.html", "sidepanel.html"]) {
+  for (const file of ["popup.html", "sidepanel.html", "manager.html"]) {
     const filePath = join(outDir, file);
     if (!existsSync(filePath)) continue;
     const html = readFileSync(filePath, "utf8")

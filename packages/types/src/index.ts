@@ -12,6 +12,8 @@ export interface SavedTab {
   tags: string[];
   /** 关联的浏览器书签 ID，用于同步 */
   bookmarkId?: string;
+  /** 排序序号（对应书签位置顺序） */
+  sortOrder?: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -24,6 +26,8 @@ export interface SavedWindow {
   tabs: Omit<SavedTab, "folderId">[];
   notes?: string;
   tags: string[];
+  /** 排序序号 */
+  sortOrder?: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -70,3 +74,10 @@ export interface BookmarkSyncResult {
   skipped: number;
   folders: number;
 }
+
+export interface BookmarkPushResult {
+  foldersCreated: number;
+  bookmarksCreated: number;
+  rootFolderTitle: string;
+}
+
