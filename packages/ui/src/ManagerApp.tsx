@@ -7,6 +7,7 @@ import {
   ExternalLinkIcon,
   FolderYellowIcon,
   GripVerticalIcon,
+  PageBoxLogo,
   PlusIcon,
   ThisPcIcon,
   TrashIcon,
@@ -335,7 +336,7 @@ export function ManagerApp() {
       {/* 顶部主导航栏 */}
       <header className="pagebox-manager__header">
         <div className="pagebox-manager__brand">
-          <span className="pagebox-manager__logo">📦</span>
+          <PageBoxLogo size={26} className="pagebox-manager__logo" />
           <h1 className="pagebox-manager__title">PageBox 标签管理中心</h1>
         </div>
 

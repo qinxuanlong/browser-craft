@@ -2,7 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import { openManagerPage, pageBoxService, subscribeToBookmarks } from "@pagebox/core";
 import type { Folder, SavedTab, SavedWindow } from "@pagebox/types";
 import { FolderTree } from "./FolderTree";
-import { ExternalLinkIcon } from "./icons";
+import {
+  BookmarkPlusIcon,
+  ExternalLinkIcon,
+  ExportIcon,
+  ImportIcon,
+  PageBoxLogo,
+  SidebarIcon,
+  WindowSaveIcon,
+} from "./icons";
 import "./styles.css";
 
 export type AppVariant = "popup" | "sidepanel";
@@ -135,32 +143,56 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
   return (
     <div className={`pagebox-app pagebox-app--${variant}`}>
       <header className="pagebox-header">
+        <PageBoxLogo size={20} />
         <h1>PageBox</h1>
       </header>
 
       <div className="pagebox-toolbar">
-        <button className="pagebox-btn pagebox-btn--primary" onClick={handleSaveTab}>
-          收藏标签
-        </button>
-        <button className="pagebox-btn" onClick={handleSaveWindow}>
-          收藏窗口
-        </button>
-        <button className="pagebox-btn" onClick={handleExport}>
-          导出
-        </button>
-        <button className="pagebox-btn" onClick={handleImport}>
-          导入
+        <button
+          className="pagebox-btn-icon pagebox-btn-icon--primary"
+          onClick={handleSaveTab}
+          title="收藏当前标签页"
+          aria-label="收藏当前标签页"
+        >
+          <BookmarkPlusIcon size={16} />
         </button>
         <button
-          className="pagebox-btn pagebox-btn--highlight"
-          onClick={() => void openManagerPage()}
-          title="在新标签页中打开完整管理中心"
+          className="pagebox-btn-icon"
+          onClick={handleSaveWindow}
+          title="收藏当前窗口所有标签"
+          aria-label="收藏当前窗口所有标签"
         >
-          <ExternalLinkIcon size={12} /> 管理页
+          <WindowSaveIcon size={16} />
+        </button>
+        <div className="pagebox-toolbar__divider" />
+        <button
+          className="pagebox-btn-icon"
+          onClick={handleExport}
+          title="导出数据备份 (JSON)"
+          aria-label="导出数据备份"
+        >
+          <ExportIcon size={16} />
+        </button>
+        <button
+          className="pagebox-btn-icon"
+          onClick={handleImport}
+          title="导入数据备份 (JSON)"
+          aria-label="导入数据备份"
+        >
+          <ImportIcon size={16} />
+        </button>
+        <div className="pagebox-toolbar__spacer" />
+        <button
+          className="pagebox-btn-icon pagebox-btn-icon--highlight"
+          onClick={() => void openManagerPage()}
+          title="在新标签页中打开管理中心"
+          aria-label="在新标签页中打开管理中心"
+        >
+          <ExternalLinkIcon size={14} />
         </button>
         {variant === "popup" && (
           <button
-            className="pagebox-btn"
+            className="pagebox-btn-icon"
             onClick={() => {
               void chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
                 if (tab?.windowId !== undefined) {
@@ -168,8 +200,10 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
                 }
               });
             }}
+            title="在浏览器侧边栏中打开"
+            aria-label="在浏览器侧边栏中打开"
           >
-            侧边栏
+            <SidebarIcon size={16} />
           </button>
         )}
       </div>

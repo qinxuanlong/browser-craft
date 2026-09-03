@@ -57,11 +57,82 @@ textarea {
 
 .pagebox-toolbar {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  padding: 12px 16px;
+  padding: 10px 16px;
   background: #fff;
   border-bottom: 1px solid #e8eaf0;
+}
+
+.pagebox-toolbar__divider {
+  width: 1px;
+  height: 18px;
+  background: #e5e7eb;
+  margin: 0 2px;
+}
+
+.pagebox-toolbar__spacer {
+  flex: 1;
+}
+
+.pagebox-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #fff;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.pagebox-btn-icon:hover {
+  background: #f3f4f6;
+  color: #111827;
+  border-color: #bbc2cd;
+}
+
+.pagebox-btn-icon:active {
+  background: #e5e7eb;
+  transform: translateY(1px);
+}
+
+.pagebox-btn-icon:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 1px;
+}
+
+.pagebox-btn-icon--primary {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: #fff;
+}
+
+.pagebox-btn-icon--primary:hover {
+  background: #4338ca;
+  border-color: #4338ca;
+  color: #fff;
+}
+
+.pagebox-btn-icon--primary:active {
+  background: #3730a3;
+}
+
+.pagebox-btn-icon--highlight {
+  background: #e0e7ff;
+  border-color: #c7d2fe;
+  color: #4338ca;
+}
+
+.pagebox-btn-icon--highlight:hover {
+  background: #c7d2fe;
+  border-color: #a5b4fc;
+  color: #3730a3;
 }
 
 .pagebox-btn {
@@ -652,7 +723,9 @@ textarea {
 }
 
 .pagebox-manager__logo {
-  font-size: 20px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .pagebox-manager__title {
