@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { openManagerPage, pageBoxService } from "@pagebox/core";
+import { openManagerPage, pageBoxService, subscribeToBookmarks } from "@pagebox/core";
 import type { Folder, SavedTab, SavedWindow } from "@pagebox/types";
 import { FolderTree } from "./FolderTree";
-import { SyncModal } from "./SyncModal";
 import { ExternalLinkIcon } from "./icons";
 import "./styles.css";
 
@@ -20,7 +19,6 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
   const [status, setStatus] = useState("");
   const [notesTarget, setNotesTarget] = useState<SavedTab | null>(null);
   const [notesDraft, setNotesDraft] = useState("");
-  const [syncModalOpen, setSyncModalOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     const store = await pageBoxService.getStore();
@@ -32,17 +30,10 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
 
   useEffect(() => {
     void refresh();
-
-    const onStorageChange = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string,
-    ) => {
-      if (area === "local" && changes.pagebox_store) {
-        void refresh();
-      }
-    };
-    chrome.storage.onChanged.addListener(onStorageChange);
-    return () => chrome.storage.onChanged.removeListener(onStorageChange);
+    const unsubscribe = subscribeToBookmarks(() => {
+      void refresh();
+    });
+    return () => unsubscribe();
   }, [refresh]);
 
   const showStatus = (msg: string) => {
@@ -161,13 +152,6 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
           导入
         </button>
         <button
-          className="pagebox-btn"
-          onClick={() => setSyncModalOpen(true)}
-          title="打开书签双向同步中心（浏览器 ⇄ 插件）"
-        >
-          双向同步
-        </button>
-        <button
           className="pagebox-btn pagebox-btn--highlight"
           onClick={() => void openManagerPage()}
           title="在新标签页中打开完整管理中心"
@@ -202,11 +186,10 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
       <main className="pagebox-content">
         {isEmpty && (
           <div className="pagebox-empty">
-            <p>暂无收藏</p>
-            <p>切换到普通网页后，点击「收藏标签」保存</p>
-            <p>或点击「同步书签」拉取浏览器收藏夹</p>
+            <p>浏览器书签为空</p>
+            <p>切换到普通网页后，点击「收藏标签」直接保存至浏览器书签</p>
             <p className="pagebox-empty__hint">
-              数据保存在本机，重新加载扩展后可能丢失；建议定期「导出」备份
+              与浏览器书签实时双向联动，修改即生效
             </p>
           </div>
         )}
@@ -290,16 +273,6 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
           </div>
         </div>
       )}
-
-      {/* 书签双向同步中心弹窗 */}
-      <SyncModal
-        isOpen={syncModalOpen}
-        onClose={() => setSyncModalOpen(false)}
-        onSuccess={(msg) => {
-          showStatus(msg);
-          void refresh();
-        }}
-      />
     </div>
   );
 }

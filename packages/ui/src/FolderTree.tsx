@@ -166,6 +166,8 @@ function FolderNode({
     (mode === "full" && (node.tabs.length > 0 || node.windows.length > 0));
   const isOpen = !collapsed.has(node.folder.id);
   const isSelected = selectedId === node.folder.id;
+  const isRoot =
+    node.folder.id === "1" || node.folder.id === "2" || node.folder.parentId === null;
 
   const handleHeaderClick = () => {
     if (mode === "sidebar") {
@@ -285,16 +287,16 @@ function FolderNode({
               <PlusIcon size={12} />
             </button>
           )}
-          {onRenameFolder && (
+          {onRenameFolder && !isRoot && (
             <button
               type="button"
-              onClick={() => onRenameFolder(node.folder.id ? node.folder : node.folder)}
+              onClick={() => onRenameFolder(node.folder)}
               title="重命名"
             >
               ✎
             </button>
           )}
-          {onDeleteFolder && (
+          {onDeleteFolder && !isRoot && (
             <button
               type="button"
               onClick={() => onDeleteFolder(node.folder)}

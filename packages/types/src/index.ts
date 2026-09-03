@@ -69,15 +69,10 @@ export interface SearchResult {
   windows: SavedWindow[];
 }
 
-export interface BookmarkSyncResult {
-  imported: number;
-  skipped: number;
-  folders: number;
-}
-
-export interface BookmarkPushResult {
-  foldersCreated: number;
-  bookmarksCreated: number;
-  rootFolderTitle: string;
+/** 扩展元数据（备注、标签与高清图标） */
+export interface BookmarkMetadata {
+  notes?: string;
+  tags?: string[];
+  favIconUrl?: string;
 }
 

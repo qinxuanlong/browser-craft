@@ -7,7 +7,9 @@ import type {
   SavedWindow,
   SearchResult,
 } from "@pagebox/types";
-import { LocalStorageRepository } from "@pagebox/storage";
+import { LocalStorageRepository, storageRepository } from "@pagebox/storage";
+
+const DEFAULT_BAR_ID = "1";
 
 function createId(): Id {
   return crypto.randomUUID();
@@ -27,208 +29,277 @@ function isSaveableUrl(url: string): boolean {
 }
 
 export class PageBoxService {
-  constructor(private readonly repo = new LocalStorageRepository()) {}
+  constructor(private readonly repo: LocalStorageRepository = storageRepository) {}
 
+  /**
+   * 从浏览器原生书签树获取全量结构，并合并扩展元数据
+   */
   async getStore(): Promise<PageBoxStore> {
-    return this.repo.getStore();
-  }
+    const [root] = await chrome.bookmarks.getTree();
+    const metadataMap = await this.repo.getAllMetadata();
+    const folders: Folder[] = [];
+    const tabs: SavedTab[] = [];
 
-  async createFolder(name: string, parentId: Id | null = null): Promise<Folder> {
-    const store = await this.repo.getStore();
-    const folder: Folder = {
-      id: createId(),
-      parentId,
-      name,
-      sortOrder: store.folders.filter((f) => f.parentId === parentId).length,
-      createdAt: now(),
-      updatedAt: now(),
-    };
-    store.folders.push(folder);
-    await this.repo.saveStore(store);
-    return folder;
-  }
+    const walk = (nodes: chrome.bookmarks.BookmarkTreeNode[], parentFolderId: Id | null) => {
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i];
+        const order = typeof node.index === "number" ? node.index : i;
 
-  async renameFolder(id: Id, name: string): Promise<Folder> {
-    const store = await this.repo.getStore();
-    const folder = store.folders.find((f) => f.id === id);
-    if (!folder) throw new Error("文件夹不存在");
-    folder.name = name.trim() || folder.name;
-    folder.updatedAt = now();
-    await this.repo.saveStore(store);
-    return folder;
-  }
+        if (node.url) {
+          // 书签项
+          if (!isSaveableUrl(node.url)) continue;
+          const meta = metadataMap[node.id];
+          tabs.push({
+            id: node.id,
+            folderId: parentFolderId,
+            title: node.title || node.url,
+            url: node.url,
+            favIconUrl: meta?.favIconUrl,
+            notes: meta?.notes,
+            tags: meta?.tags ?? [],
+            bookmarkId: node.id,
+            sortOrder: order,
+            createdAt: node.dateAdded ?? now(),
+            updatedAt: node.dateAdded ?? now(),
+          });
+        } else {
+          // 文件夹节点
+          // Chrome 书签树顶层根节点 id: "0" 虚拟跳过，只递归子项
+          if (node.id === "0") {
+            if (node.children?.length) {
+              walk(node.children, null);
+            }
+            continue;
+          }
 
-  async deleteFolder(id: Id, deleteTabs = false): Promise<void> {
-    const store = await this.repo.getStore();
-    const folder = store.folders.find((f) => f.id === id);
-    if (!folder) throw new Error("文件夹不存在");
+          const folder: Folder = {
+            id: node.id,
+            // 顶层文件夹（如书签栏 id: "1"、其他书签 id: "2"）在 Chrome 下 parentId 是 "0"，在插件内视作根目录 null
+            parentId: parentFolderId,
+            name: node.title || "未命名文件夹",
+            bookmarkId: node.id,
+            sortOrder: order,
+            createdAt: node.dateAdded ?? now(),
+            updatedAt: node.dateGroupModified ?? node.dateAdded ?? now(),
+          };
+          folders.push(folder);
 
-    // 递归收集所有待删除的子文件夹 ID
-    const folderIdsToDelete = new Set<Id>([id]);
-    let added = true;
-    while (added) {
-      added = false;
-      for (const f of store.folders) {
-        if (f.parentId && folderIdsToDelete.has(f.parentId) && !folderIdsToDelete.has(f.id)) {
-          folderIdsToDelete.add(f.id);
-          added = true;
+          if (node.children?.length) {
+            walk(node.children, folder.id);
+          }
         }
       }
+    };
+
+    if (root) {
+      walk([root], null);
+    }
+
+    const windows = await this.repo.getWindows();
+
+    return {
+      version: 1,
+      folders,
+      tabs,
+      windows,
+    };
+  }
+
+  /**
+   * 在浏览器书签中创建文件夹
+   */
+  async createFolder(name: string, parentId: Id | null = null): Promise<Folder> {
+    const targetParentId = parentId ?? DEFAULT_BAR_ID;
+    const created = await chrome.bookmarks.create({
+      parentId: targetParentId,
+      title: name.trim() || "新建文件夹",
+    });
+
+    return {
+      id: created.id,
+      parentId: created.parentId === "0" ? null : (created.parentId ?? null),
+      name: created.title,
+      sortOrder: created.index ?? 0,
+      bookmarkId: created.id,
+      createdAt: created.dateAdded ?? now(),
+      updatedAt: created.dateGroupModified ?? created.dateAdded ?? now(),
+    };
+  }
+
+  /**
+   * 重命名浏览器书签文件夹
+   */
+  async renameFolder(id: Id, name: string): Promise<Folder> {
+    if (id === "0" || id === "1" || id === "2") {
+      throw new Error("浏览器系统根文件夹不可重命名");
+    }
+    const updated = await chrome.bookmarks.update(id, {
+      title: name.trim(),
+    });
+
+    return {
+      id: updated.id,
+      parentId: updated.parentId === "0" ? null : (updated.parentId ?? null),
+      name: updated.title,
+      sortOrder: updated.index ?? 0,
+      bookmarkId: updated.id,
+      createdAt: updated.dateAdded ?? now(),
+      updatedAt: updated.dateGroupModified ?? updated.dateAdded ?? now(),
+    };
+  }
+
+  /**
+   * 删除浏览器书签文件夹
+   */
+  async deleteFolder(id: Id, deleteTabs = false): Promise<void> {
+    if (id === "0" || id === "1" || id === "2") {
+      throw new Error("浏览器系统根文件夹不可删除");
     }
 
     if (deleteTabs) {
-      // 级联删除属于这些文件夹的标签和窗口
-      store.tabs = store.tabs.filter((t) => !t.folderId || !folderIdsToDelete.has(t.folderId));
-      store.windows = store.windows.filter((w) => !w.folderId || !folderIdsToDelete.has(w.folderId));
+      await chrome.bookmarks.removeTree(id);
     } else {
-      // 保留标签和窗口，移动到未分类 (folderId = null)
-      for (const t of store.tabs) {
-        if (t.folderId && folderIdsToDelete.has(t.folderId)) {
-          t.folderId = null;
-          t.updatedAt = now();
-        }
+      // 保持内部内容：将其移动到父级目录后再删除本文件夹
+      const [folder] = await chrome.bookmarks.get(id);
+      const targetParentId =
+        folder?.parentId && folder.parentId !== "0" ? folder.parentId : DEFAULT_BAR_ID;
+      const children = await chrome.bookmarks.getChildren(id);
+      for (const child of children) {
+        await chrome.bookmarks.move(child.id, { parentId: targetParentId });
       }
-      for (const w of store.windows) {
-        if (w.folderId && folderIdsToDelete.has(w.folderId)) {
-          w.folderId = null;
-          w.updatedAt = now();
-        }
-      }
+      await chrome.bookmarks.remove(id);
     }
-
-    // 移除文件夹
-    store.folders = store.folders.filter((f) => !folderIdsToDelete.has(f.id));
-    await this.repo.saveStore(store);
   }
 
+  /**
+   * 移动单个标签至目标文件夹
+   */
   async moveTabToFolder(tabId: Id, targetFolderId: Id | null): Promise<SavedTab> {
-    const store = await this.repo.getStore();
-    const tab = store.tabs.find((t) => t.id === tabId);
-    if (!tab) throw new Error("标签不存在");
-    tab.folderId = targetFolderId;
-    const existing = store.tabs.filter((t) => t.folderId === targetFolderId && t.id !== tabId);
-    tab.sortOrder = existing.length;
-    tab.updatedAt = now();
-    await this.repo.saveStore(store);
-    return tab;
+    const targetParentId = targetFolderId ?? DEFAULT_BAR_ID;
+    const moved = await chrome.bookmarks.move(tabId, { parentId: targetParentId });
+    const meta = await this.repo.getMetadata(tabId);
+
+    return {
+      id: moved.id,
+      folderId: moved.parentId === "0" ? null : (moved.parentId ?? null),
+      title: moved.title || moved.url || "",
+      url: moved.url || "",
+      favIconUrl: meta?.favIconUrl,
+      notes: meta?.notes,
+      tags: meta?.tags ?? [],
+      bookmarkId: moved.id,
+      sortOrder: moved.index ?? 0,
+      createdAt: moved.dateAdded ?? now(),
+      updatedAt: moved.dateAdded ?? now(),
+    };
   }
 
+  /**
+   * 批量移动标签至目标文件夹
+   */
   async moveTabsToFolder(tabIds: Id[], targetFolderId: Id | null): Promise<void> {
-    const store = await this.repo.getStore();
-    const idSet = new Set(tabIds);
-    const existingCount = store.tabs.filter(
-      (t) => t.folderId === targetFolderId && !idSet.has(t.id),
-    ).length;
-    let added = 0;
-    const timestamp = now();
-    for (const tab of store.tabs) {
-      if (idSet.has(tab.id)) {
-        tab.folderId = targetFolderId;
-        tab.sortOrder = existingCount + added;
-        tab.updatedAt = timestamp;
-        added++;
-      }
+    const targetParentId = targetFolderId ?? DEFAULT_BAR_ID;
+    for (const tabId of tabIds) {
+      await chrome.bookmarks.move(tabId, { parentId: targetParentId });
     }
-    await this.repo.saveStore(store);
   }
 
+  /**
+   * 调整标签排序序号
+   */
   async reorderTabs(orderedTabIds: Id[]): Promise<void> {
-    const store = await this.repo.getStore();
-    const idToIndex = new Map<Id, number>();
-    orderedTabIds.forEach((id, index) => idToIndex.set(id, index));
-    const timestamp = now();
-    for (const tab of store.tabs) {
-      if (idToIndex.has(tab.id)) {
-        tab.sortOrder = idToIndex.get(tab.id);
-        tab.updatedAt = timestamp;
-      }
+    for (let i = 0; i < orderedTabIds.length; i++) {
+      await chrome.bookmarks.move(orderedTabIds[i], { index: i });
     }
-    await this.repo.saveStore(store);
   }
 
-  async reorderFolders(parentId: Id | null, orderedFolderIds: Id[]): Promise<void> {
-    const store = await this.repo.getStore();
-    const idToIndex = new Map<Id, number>();
-    orderedFolderIds.forEach((id, index) => idToIndex.set(id, index));
-    const timestamp = now();
-    for (const folder of store.folders) {
-      if (folder.parentId === parentId && idToIndex.has(folder.id)) {
-        folder.sortOrder = idToIndex.get(folder.id)!;
-        folder.updatedAt = timestamp;
-      }
+  /**
+   * 调整文件夹排序序号
+   */
+  async reorderFolders(_parentId: Id | null, orderedFolderIds: Id[]): Promise<void> {
+    for (let i = 0; i < orderedFolderIds.length; i++) {
+      await chrome.bookmarks.move(orderedFolderIds[i], { index: i });
     }
-    await this.repo.saveStore(store);
   }
 
+  /**
+   * 拖拽调整文件夹层级或排序
+   */
   async moveFolder(
     sourceFolderId: Id,
     targetFolderId: Id,
     position: "before" | "after" | "inside" = "inside",
   ): Promise<Folder> {
-    const store = await this.repo.getStore();
-    const sourceFolder = store.folders.find((f) => f.id === sourceFolderId);
-    const targetFolder = store.folders.find((f) => f.id === targetFolderId);
-    if (!sourceFolder) throw new Error("源文件夹不存在");
-    if (!targetFolder) throw new Error("目标文件夹不存在");
-
     if (sourceFolderId === targetFolderId) {
-      return sourceFolder;
+      const [curr] = await chrome.bookmarks.get(sourceFolderId);
+      return {
+        id: curr.id,
+        parentId: curr.parentId === "0" ? null : (curr.parentId ?? null),
+        name: curr.title,
+        sortOrder: curr.index ?? 0,
+        bookmarkId: curr.id,
+        createdAt: curr.dateAdded ?? now(),
+        updatedAt: curr.dateGroupModified ?? curr.dateAdded ?? now(),
+      };
     }
 
-    // 防止循环嵌套：targetFolder 不能是 sourceFolder 自身或其子孙文件夹
-    let cur: Folder | undefined = targetFolder;
-    while (cur) {
-      if (cur.id === sourceFolderId) {
-        throw new Error("不能将文件夹移动到其子文件夹中");
-      }
-      cur = cur.parentId ? store.folders.find((f) => f.id === cur?.parentId) : undefined;
+    if (sourceFolderId === "0" || sourceFolderId === "1" || sourceFolderId === "2") {
+      throw new Error("浏览器系统根文件夹不可移动");
     }
-
-    const timestamp = now();
 
     if (position === "inside") {
-      // 塞入目标文件夹内部
-      sourceFolder.parentId = targetFolder.id;
-      sourceFolder.updatedAt = timestamp;
-      const siblings = store.folders
-        .filter((f) => f.parentId === targetFolder.id && f.id !== sourceFolderId)
-        .sort((a, b) => a.sortOrder - b.sortOrder);
-      sourceFolder.sortOrder = siblings.length;
-      await this.repo.saveStore(store);
-      return sourceFolder;
+      const moved = await chrome.bookmarks.move(sourceFolderId, {
+        parentId: targetFolderId,
+      });
+      return {
+        id: moved.id,
+        parentId: moved.parentId === "0" ? null : (moved.parentId ?? null),
+        name: moved.title,
+        sortOrder: moved.index ?? 0,
+        bookmarkId: moved.id,
+        createdAt: moved.dateAdded ?? now(),
+        updatedAt: moved.dateGroupModified ?? moved.dateAdded ?? now(),
+      };
     }
 
-    // 同级排序：保持在 targetFolder 相同的父级目录下，插入在其前或后
-    const targetParentId = targetFolder.parentId;
-    sourceFolder.parentId = targetParentId;
-    sourceFolder.updatedAt = timestamp;
+    const [targetNode] = await chrome.bookmarks.get(targetFolderId);
+    const targetParentId =
+      targetNode.parentId && targetNode.parentId !== "0" ? targetNode.parentId : DEFAULT_BAR_ID;
+    const targetIndex =
+      position === "before" ? Math.max(0, targetNode.index ?? 0) : (targetNode.index ?? 0) + 1;
 
-    const siblings = store.folders
-      .filter((f) => f.parentId === targetParentId && f.id !== sourceFolderId)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
-
-    const targetIdx = siblings.findIndex((f) => f.id === targetFolder.id);
-    const insertIdx = position === "before" ? Math.max(0, targetIdx) : targetIdx + 1;
-
-    siblings.splice(insertIdx, 0, sourceFolder);
-    siblings.forEach((f, idx) => {
-      f.sortOrder = idx;
+    const moved = await chrome.bookmarks.move(sourceFolderId, {
+      parentId: targetParentId,
+      index: targetIndex,
     });
 
-    await this.repo.saveStore(store);
-    return sourceFolder;
+    return {
+      id: moved.id,
+      parentId: moved.parentId === "0" ? null : (moved.parentId ?? null),
+      name: moved.title,
+      sortOrder: moved.index ?? 0,
+      bookmarkId: moved.id,
+      createdAt: moved.dateAdded ?? now(),
+      updatedAt: moved.dateGroupModified ?? moved.dateAdded ?? now(),
+    };
   }
 
+  /**
+   * 移动窗口到指定文件夹
+   */
   async moveWindowToFolder(windowId: Id, targetFolderId: Id | null): Promise<SavedWindow> {
-    const store = await this.repo.getStore();
-    const win = store.windows.find((w) => w.id === windowId);
+    const windows = await this.repo.getWindows();
+    const win = windows.find((w) => w.id === windowId);
     if (!win) throw new Error("窗口不存在");
     win.folderId = targetFolderId;
     win.updatedAt = now();
-    await this.repo.saveStore(store);
+    await this.repo.saveWindows(windows);
     return win;
   }
 
+  /**
+   * 保存单个网页到浏览器书签，并绑定元数据
+   */
   async saveTab(input: {
     title: string;
     url: string;
@@ -237,27 +308,39 @@ export class PageBoxService {
     notes?: string;
     tags?: string[];
   }): Promise<SavedTab> {
-    const store = await this.repo.getStore();
-    const timestamp = now();
-    const targetFolderId = input.folderId ?? null;
-    const existingInFolder = store.tabs.filter((t) => t.folderId === targetFolderId);
-    const tab: SavedTab = {
-      id: createId(),
-      folderId: targetFolderId,
+    const targetParentId = input.folderId ?? DEFAULT_BAR_ID;
+    const created = await chrome.bookmarks.create({
+      parentId: targetParentId,
       title: input.title,
       url: input.url,
+    });
+
+    if (input.notes || (input.tags && input.tags.length > 0) || input.favIconUrl) {
+      await this.repo.setMetadata(created.id, {
+        notes: input.notes,
+        tags: input.tags,
+        favIconUrl: input.favIconUrl,
+      });
+    }
+
+    return {
+      id: created.id,
+      folderId: created.parentId === "0" ? null : (created.parentId ?? null),
+      title: created.title || created.url || "",
+      url: created.url || "",
       favIconUrl: input.favIconUrl,
       notes: input.notes,
       tags: input.tags ?? [],
-      sortOrder: existingInFolder.length,
-      createdAt: timestamp,
-      updatedAt: timestamp,
+      bookmarkId: created.id,
+      sortOrder: created.index ?? 0,
+      createdAt: created.dateAdded ?? now(),
+      updatedAt: created.dateAdded ?? now(),
     };
-    store.tabs.push(tab);
-    await this.repo.saveStore(store);
-    return tab;
   }
 
+  /**
+   * 收藏当前浏览器活跃标签页
+   */
   async saveCurrentTab(notes?: string, folderId?: Id | null): Promise<SavedTab> {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.url) {
@@ -275,6 +358,9 @@ export class PageBoxService {
     });
   }
 
+  /**
+   * 收藏一组标签页为窗口快照
+   */
   async saveWindow(input: {
     name: string;
     tabs: chrome.tabs.Tab[];
@@ -282,10 +368,11 @@ export class PageBoxService {
     notes?: string;
     tags?: string[];
   }): Promise<SavedWindow> {
-    const store = await this.repo.getStore();
+    const windows = await this.repo.getWindows();
     const timestamp = now();
     const targetFolderId = input.folderId ?? null;
-    const existingInFolder = store.windows.filter((w) => w.folderId === targetFolderId);
+    const existingInFolder = windows.filter((w) => w.folderId === targetFolderId);
+
     const savedWindow: SavedWindow = {
       id: createId(),
       folderId: targetFolderId,
@@ -296,7 +383,7 @@ export class PageBoxService {
       createdAt: timestamp,
       updatedAt: timestamp,
       tabs: input.tabs
-        .filter((t) => t.url)
+        .filter((t) => t.url && isSaveableUrl(t.url))
         .map((t) => ({
           id: createId(),
           title: t.title ?? t.url!,
@@ -307,11 +394,15 @@ export class PageBoxService {
           updatedAt: timestamp,
         })),
     };
-    store.windows.push(savedWindow);
-    await this.repo.saveStore(store);
+
+    windows.push(savedWindow);
+    await this.repo.saveWindows(windows);
     return savedWindow;
   }
 
+  /**
+   * 收藏当前窗口所有网页
+   */
   async saveCurrentWindow(name?: string, folderId?: Id | null): Promise<SavedWindow> {
     const tabs = await chrome.tabs.query({ currentWindow: true });
     const defaultName = `窗口 ${new Date().toLocaleString("zh-CN")}`;
@@ -322,9 +413,12 @@ export class PageBoxService {
     });
   }
 
+  /**
+   * 全文搜索（标题、URL、备注、标签）
+   */
   async search(query: string): Promise<SearchResult> {
     const q = query.trim().toLowerCase();
-    const store = await this.repo.getStore();
+    const store = await this.getStore();
     if (!q) {
       return { tabs: store.tabs, windows: store.windows };
     }
@@ -349,69 +443,166 @@ export class PageBoxService {
     };
   }
 
+  /**
+   * 在新标签页打开保存的书签
+   */
   async restoreTab(tabId: Id): Promise<void> {
-    const store = await this.repo.getStore();
-    const tab = store.tabs.find((t) => t.id === tabId);
-    if (!tab) throw new Error("标签不存在");
-    await chrome.tabs.create({ url: tab.url, active: true });
+    const [node] = await chrome.bookmarks.get(tabId);
+    if (node?.url) {
+      await chrome.tabs.create({ url: node.url, active: true });
+    }
   }
 
+  /**
+   * 恢复窗口内全部标签页
+   */
   async restoreWindow(windowId: Id): Promise<void> {
-    const store = await this.repo.getStore();
-    const saved = store.windows.find((w) => w.id === windowId);
+    const windows = await this.repo.getWindows();
+    const saved = windows.find((w) => w.id === windowId);
     if (!saved) throw new Error("窗口不存在");
     for (const tab of saved.tabs) {
       await chrome.tabs.create({ url: tab.url, active: false });
     }
   }
 
+  /**
+   * 删除书签及关联元数据
+   */
   async deleteTab(tabId: Id): Promise<void> {
-    const store = await this.repo.getStore();
-    store.tabs = store.tabs.filter((t) => t.id !== tabId);
-    await this.repo.saveStore(store);
+    await chrome.bookmarks.remove(tabId);
+    await this.repo.removeMetadata(tabId);
   }
 
+  /**
+   * 删除窗口快照
+   */
   async deleteWindow(windowId: Id): Promise<void> {
-    const store = await this.repo.getStore();
-    store.windows = store.windows.filter((w) => w.id !== windowId);
-    await this.repo.saveStore(store);
+    const windows = await this.repo.getWindows();
+    const filtered = windows.filter((w) => w.id !== windowId);
+    await this.repo.saveWindows(filtered);
   }
 
+  /**
+   * 更新书签备注
+   */
   async updateTabNotes(tabId: Id, notes: string): Promise<SavedTab> {
-    const store = await this.repo.getStore();
-    const tab = store.tabs.find((t) => t.id === tabId);
-    if (!tab) throw new Error("标签不存在");
-    tab.notes = notes;
-    tab.updatedAt = now();
-    await this.repo.saveStore(store);
-    return tab;
+    await this.repo.setMetadata(tabId, { notes });
+    const [node] = await chrome.bookmarks.get(tabId);
+    const meta = await this.repo.getMetadata(tabId);
+
+    return {
+      id: node.id,
+      folderId: node.parentId === "0" ? null : (node.parentId ?? null),
+      title: node.title || node.url || "",
+      url: node.url || "",
+      favIconUrl: meta?.favIconUrl,
+      notes: meta?.notes,
+      tags: meta?.tags ?? [],
+      bookmarkId: node.id,
+      sortOrder: node.index ?? 0,
+      createdAt: node.dateAdded ?? now(),
+      updatedAt: node.dateAdded ?? now(),
+    };
   }
 
+  /**
+   * 导出备份数据
+   */
   async exportData(): Promise<PageBoxExport> {
-    const store = await this.repo.getStore();
+    const store = await this.getStore();
     return { exportedAt: now(), store };
   }
 
-  async importData(data: PageBoxExport, merge = false): Promise<void> {
-    if (merge) {
-      const current = await this.repo.getStore();
-      const merged: PageBoxStore = {
-        version: 1,
-        folders: [...current.folders, ...data.store.folders],
-        tabs: [...current.tabs, ...data.store.tabs],
-        windows: [...current.windows, ...data.store.windows],
-      };
-      await this.repo.saveStore(merged);
-    } else {
-      await this.repo.saveStore(data.store);
+  /**
+   * 导入备份数据
+   */
+  async importData(data: PageBoxExport, merge = true): Promise<void> {
+    // 恢复窗口快照
+    if (data.store.windows?.length) {
+      const currentWindows = await this.repo.getWindows();
+      if (merge) {
+        await this.repo.saveWindows([...currentWindows, ...data.store.windows]);
+      } else {
+        await this.repo.saveWindows(data.store.windows);
+      }
+    }
+
+    // 建立导入专用目录，保障用户既有书签不受破坏
+    const importFolderName = `PageBox 导入 (${new Date().toLocaleDateString("zh-CN")})`;
+    const rootFolder = await chrome.bookmarks.create({
+      parentId: DEFAULT_BAR_ID,
+      title: importFolderName,
+    });
+
+    const folderIdMap = new Map<Id, string>();
+
+    // 递归写入导入的文件夹
+    for (const folder of data.store.folders) {
+      const parentId = folder.parentId
+        ? folderIdMap.get(folder.parentId) ?? rootFolder.id
+        : rootFolder.id;
+      const createdFolder = await chrome.bookmarks.create({
+        parentId,
+        title: folder.name,
+      });
+      folderIdMap.set(folder.id, createdFolder.id);
+    }
+
+    // 写入标签并恢复备注/标签元数据
+    for (const tab of data.store.tabs) {
+      if (!tab.url || !isSaveableUrl(tab.url)) continue;
+      const parentId = tab.folderId
+        ? folderIdMap.get(tab.folderId) ?? rootFolder.id
+        : rootFolder.id;
+      const createdTab = await chrome.bookmarks.create({
+        parentId,
+        title: tab.title || tab.url,
+        url: tab.url,
+      });
+
+      if (tab.notes || (tab.tags && tab.tags.length > 0) || tab.favIconUrl) {
+        await this.repo.setMetadata(createdTab.id, {
+          notes: tab.notes,
+          tags: tab.tags,
+          favIconUrl: tab.favIconUrl,
+        });
+      }
     }
   }
 }
 
 export const pageBoxService = new PageBoxService();
-export { BookmarkSyncService, bookmarkSyncService } from "./bookmark-sync";
-export type { SyncToBrowserOptions } from "./bookmark-sync";
 
+/**
+ * 监听浏览器原生书签与扩展元数据的实时变动
+ */
+export function subscribeToBookmarks(listener: () => void): () => void {
+  const onBookmarksChanged = () => listener();
+  const onStorageChanged = (
+    changes: Record<string, chrome.storage.StorageChange>,
+    area: string,
+  ) => {
+    if (area === "local" && (changes.pagebox_metadata || changes.pagebox_windows)) {
+      listener();
+    }
+  };
+
+  chrome.bookmarks.onCreated.addListener(onBookmarksChanged);
+  chrome.bookmarks.onRemoved.addListener(onBookmarksChanged);
+  chrome.bookmarks.onChanged.addListener(onBookmarksChanged);
+  chrome.bookmarks.onMoved.addListener(onBookmarksChanged);
+  chrome.bookmarks.onChildrenReordered.addListener(onBookmarksChanged);
+  chrome.storage.onChanged.addListener(onStorageChanged);
+
+  return () => {
+    chrome.bookmarks.onCreated.removeListener(onBookmarksChanged);
+    chrome.bookmarks.onRemoved.removeListener(onBookmarksChanged);
+    chrome.bookmarks.onChanged.removeListener(onBookmarksChanged);
+    chrome.bookmarks.onMoved.removeListener(onBookmarksChanged);
+    chrome.bookmarks.onChildrenReordered.removeListener(onBookmarksChanged);
+    chrome.storage.onChanged.removeListener(onStorageChanged);
+  };
+}
 
 /** 打开或激活全屏管理大页 */
 export async function openManagerPage(): Promise<void> {

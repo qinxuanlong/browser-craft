@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { pageBoxService } from "@pagebox/core";
+import { pageBoxService, subscribeToBookmarks } from "@pagebox/core";
 import type { Folder, Id, SavedTab, SavedWindow } from "@pagebox/types";
 import { FolderTree } from "./FolderTree";
-import { SyncModal } from "./SyncModal";
 import {
   ChevronRight,
   ExternalLinkIcon,
@@ -25,7 +24,6 @@ export function ManagerApp() {
   const [activeNav, setActiveNav] = useState<NavigationFilter>("all");
   const [selectedTabIds, setSelectedTabIds] = useState<Set<Id>>(new Set());
   const [status, setStatus] = useState("");
-  const [syncModalOpen, setSyncModalOpen] = useState(false);
 
   // 拖拽状态
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
@@ -62,17 +60,10 @@ export function ManagerApp() {
 
   useEffect(() => {
     void refresh();
-
-    const onStorageChange = (
-      changes: Record<string, chrome.storage.StorageChange>,
-      area: string,
-    ) => {
-      if (area === "local" && changes.pagebox_store) {
-        void refresh();
-      }
-    };
-    chrome.storage.onChanged.addListener(onStorageChange);
-    return () => chrome.storage.onChanged.removeListener(onStorageChange);
+    const unsubscribe = subscribeToBookmarks(() => {
+      void refresh();
+    });
+    return () => unsubscribe();
   }, [refresh]);
 
   const showStatus = (msg: string) => {
@@ -226,6 +217,10 @@ export function ManagerApp() {
   };
 
   const handleOpenRename = (folder: Folder) => {
+    if (folder.id === "1" || folder.id === "2" || folder.parentId === null) {
+      showStatus("浏览器系统根文件夹不可重命名");
+      return;
+    }
     setRenameTarget(folder);
     setRenameDraft(folder.name);
   };
@@ -239,7 +234,11 @@ export function ManagerApp() {
   };
 
   const handleDeleteFolder = async (folder: Folder) => {
-    if (confirm(`确定要删除文件夹 "${folder.name}" 吗？（内部标签将被保留并移至未分类）`)) {
+    if (folder.id === "1" || folder.id === "2" || folder.parentId === null) {
+      showStatus("浏览器系统根文件夹不可删除");
+      return;
+    }
+    if (confirm(`确定要删除文件夹 "${folder.name}" 吗？（内部标签将被保留并移至上一级目录）`)) {
       await pageBoxService.deleteFolder(folder.id, false);
       if (activeNav === folder.id) {
         setActiveNav("all");
@@ -352,16 +351,9 @@ export function ManagerApp() {
         <div className="pagebox-manager__top-actions">
           <button
             className="pagebox-btn pagebox-btn--primary"
-            onClick={() => handleOpenCreateFolderModal(null)}
+            onClick={() => handleOpenCreateFolderModal(currentFolder?.id ?? null)}
           >
             <PlusIcon size={14} /> 新建文件夹
-          </button>
-          <button
-            className="pagebox-btn"
-            onClick={() => setSyncModalOpen(true)}
-            title="打开书签双向同步中心（浏览器 ⇄ 插件）"
-          >
-            双向同步
           </button>
           <button className="pagebox-btn" onClick={handleExport}>
             导出
@@ -480,18 +472,24 @@ export function ManagerApp() {
                   >
                     <PlusIcon size={12} /> 子文件夹
                   </button>
-                  <button
-                    className="pagebox-btn pagebox-btn--sm"
-                    onClick={() => handleOpenRename(currentFolder)}
-                  >
-                    重命名
-                  </button>
-                  <button
-                    className="pagebox-btn pagebox-btn--sm pagebox-btn--danger"
-                    onClick={() => handleDeleteFolder(currentFolder)}
-                  >
-                    <TrashIcon size={12} /> 删除
-                  </button>
+                  {currentFolder.id !== "1" &&
+                    currentFolder.id !== "2" &&
+                    currentFolder.parentId !== null && (
+                      <>
+                        <button
+                          className="pagebox-btn pagebox-btn--sm"
+                          onClick={() => handleOpenRename(currentFolder)}
+                        >
+                          重命名
+                        </button>
+                        <button
+                          className="pagebox-btn pagebox-btn--sm pagebox-btn--danger"
+                          onClick={() => handleDeleteFolder(currentFolder)}
+                        >
+                          <TrashIcon size={12} /> 删除
+                        </button>
+                      </>
+                    )}
                 </>
               )}
             </div>
@@ -932,16 +930,6 @@ export function ManagerApp() {
           </div>
         </div>
       )}
-
-      {/* 书签双向同步中心弹窗 */}
-      <SyncModal
-        isOpen={syncModalOpen}
-        onClose={() => setSyncModalOpen(false)}
-        onSuccess={(msg) => {
-          showStatus(msg);
-          void refresh();
-        }}
-      />
     </div>
   );
 }
