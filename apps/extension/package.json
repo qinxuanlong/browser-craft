@@ -1,0 +1,25 @@
+{
+  "name": "@pagebox/extension",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pagebox/core": "workspace:*",
+    "@pagebox/ui": "workspace:*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@wxt-dev/module-react": "^1.1.3",
+    "typescript": "^5.7.3",
+    "wxt": "^0.19.25"
+  }
+}

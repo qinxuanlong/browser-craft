@@ -1,0 +1,9 @@
+node_modules
+dist
+.output
+.turbo
+*.local
+.env*
+.DS_Store
+*.log
+.wxt
