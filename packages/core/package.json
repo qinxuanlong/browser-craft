@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@pagebox/storage": "workspace:*",
-    "@pagebox/types": "workspace:*"
+    "@pagebox/types": "workspace:*",
+    "@workspace/shared-license": "workspace:*"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.287",

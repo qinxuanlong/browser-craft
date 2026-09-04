@@ -24,14 +24,19 @@
 ## 项目结构
 
 ```
-PageBox/
+PageBox/ (多扩展 Monorepo 体系)
 ├── apps/
-│   └── extension/          # 浏览器插件（WXT）
+│   ├── pagebox/              # PageBox 标签页收藏插件（WXT + React 19）
+│   └── demo-plugin/          # 多插件开发模版/示例扩展
 ├── packages/
-│   ├── types/              # 共享类型定义
-│   ├── storage/            # chrome.storage 封装
-│   ├── core/               # 业务逻辑（收藏/搜索/导入导出）
-│   └── ui/                 # 共享 React UI
+│   ├── # --- 通用基础设施层（跨插件复用）---
+│   ├── shared-license/       # 通用 Lemon Squeezy 商业化/会员离线激活服务
+│   ├── shared-utils/         # 跨插件通用浏览器扩展辅助与 WXT 路径修复工具
+│   ├── # --- PageBox 专有业务层 ---
+│   ├── types/                # PageBox 领域实体定义与数据模型
+│   ├── storage/              # PageBox 本地数据仓库封装
+│   ├── core/                 # PageBox 核心业务逻辑（书签同步/导入导出）
+│   └── ui/                   # PageBox 专属管理界面与树组件
 ├── pnpm-workspace.yaml
 └── turbo.json
 ```
@@ -39,17 +44,34 @@ PageBox/
 ## 快速开始
 
 ```bash
-# 安装依赖
+# 安装依赖并链接工作区
 pnpm install
 
-# 开发模式（热更新）
-pnpm dev
+# 单独调试 PageBox 插件（热更新）
+pnpm dev:pagebox
 
-# 生产构建
+# 单独调试 Demo 示例插件（热更新）
+pnpm dev:demo
+
+# 全量构建所有插件与共享包
 pnpm build
+
+# 单独构建指定插件
+pnpm build:pagebox
+pnpm build:demo
 ```
 
-开发模式下，WXT 会输出 `.output/chrome-mv3` 目录。在 Chrome 中打开 `chrome://extensions` → 开启「开发者模式」→「加载已解压的扩展程序」→ 选择该目录。
+开发或构建完成后，对应插件会在各自目录下输出 `.output/chrome-mv3`（如 `apps/pagebox/.output/chrome-mv3`）。在 Chrome 中打开 `chrome://extensions` → 开启「开发者模式」→「加载已解压的扩展程序」→ 选择对应插件的 `.output/chrome-mv3` 即可。
+
+### 🧩 如何在此仓库新建一个扩展？
+
+1. 复制 `apps/demo-plugin` 目录为 `apps/<你的插件名>`；
+2. 修改 `apps/<你的插件名>/package.json` 中的 `name: "@apps/<你的插件名>"`；
+3. 直接在 `dependencies` 中引用共享基础设施：
+   - `"@workspace/shared-utils": "workspace:*"`：开箱即用 WXT HTML 构建修复与 Chrome 常用工具。
+   - `"@workspace/shared-license": "workspace:*"`：一行代码快速接入统一的会员订阅与离线激活体系。
+4. 运行 `pnpm install` 自动建立软链，随后即可运行 `pnpm dev` 开始开发。
+
 
 ## 加载 Side Panel
 

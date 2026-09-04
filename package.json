@@ -4,7 +4,11 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "turbo dev",
+    "dev:pagebox": "turbo dev --filter=@apps/pagebox",
+    "dev:demo": "turbo dev --filter=@apps/demo-plugin",
     "build": "turbo build",
+    "build:pagebox": "turbo build --filter=@apps/pagebox",
+    "build:demo": "turbo build --filter=@apps/demo-plugin",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck"
   },

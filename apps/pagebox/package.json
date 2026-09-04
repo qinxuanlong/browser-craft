@@ -1,16 +1,18 @@
 {
-  "name": "@pagebox/extension",
+  "name": "@apps/pagebox",
   "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",
+    "postinstall": "wxt prepare",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@pagebox/core": "workspace:*",
     "@pagebox/ui": "workspace:*",
+    "@workspace/shared-utils": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

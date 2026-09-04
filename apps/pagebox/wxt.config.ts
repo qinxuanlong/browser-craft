@@ -1,18 +1,7 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 import { defineConfig } from "wxt";
+import { fixExtensionHtmlPaths } from "@workspace/shared-utils/wxt";
 
-function fixExtensionHtmlPaths(outDir: string) {
-  for (const file of ["popup.html", "sidepanel.html", "manager.html"]) {
-    const filePath = join(outDir, file);
-    if (!existsSync(filePath)) continue;
-    const html = readFileSync(filePath, "utf8")
-      .replace(/src="\/chunks\//g, 'src="./chunks/')
-      .replace(/href="\/chunks\//g, 'href="./chunks/')
-      .replace(/href="\/assets\//g, 'href="./assets/');
-    writeFileSync(filePath, html);
-  }
-}
 
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],

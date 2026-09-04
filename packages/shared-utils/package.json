@@ -1,19 +1,19 @@
 {
-  "name": "@pagebox/types",
+  "name": "@workspace/shared-utils",
   "version": "0.0.1",
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./wxt": "./src/wxt.ts",
+    "./chrome": "./src/chrome.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "@workspace/shared-license": "workspace:*"
-  },
   "devDependencies": {
     "@types/chrome": "^0.0.287",
+    "@types/node": "^22.0.0",
     "typescript": "^5.7.3"
   }
 }
