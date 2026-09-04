@@ -9,6 +9,7 @@ import {
   TrashIcon,
 } from "./icons";
 import { buildFolderTree, type FolderTreeNode } from "./tree";
+import { TabFavicon } from "./Favicon";
 
 export interface FolderTreeProps {
   folders: Folder[];
@@ -57,11 +58,12 @@ function TabRow({
       onClick={() => onRestoreTab?.(tab)}
     >
       <div className="pagebox-tree-item__chevron-spacer" />
-      {tab.favIconUrl ? (
-        <img className="pagebox-tree-item__favicon" src={tab.favIconUrl} alt="" />
-      ) : (
-        <span className="pagebox-tree-item__dot" />
-      )}
+      <TabFavicon
+        url={tab.url}
+        favIconUrl={tab.favIconUrl}
+        className="pagebox-tree-item__favicon"
+        size={14}
+      />
       <div className="pagebox-tree-item__content">
         <div className="pagebox-tree-item__title">{tab.title}</div>
         <div className="pagebox-tree-item__url">{tab.url}</div>

@@ -2,8 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { pageBoxService, subscribeToBookmarks } from "@pagebox/core";
 import type { Folder, Id, SavedTab, SavedWindow } from "@pagebox/types";
 import { FolderTree } from "./FolderTree";
+import { TabFavicon } from "./Favicon";
 import {
   ChevronRight,
+  CloseIcon,
+  CrownIcon,
   ExternalLinkIcon,
   FolderYellowIcon,
   GripVerticalIcon,
@@ -13,6 +16,8 @@ import {
   TrashIcon,
   WindowGroupIcon,
 } from "./icons";
+import { LicenseModal } from "./LicenseModal";
+import { useLicense } from "./useLicense";
 import "./styles.css";
 
 type NavigationFilter = "all" | "uncategorized" | "windows" | "bookmarks" | string; // string is folderId
@@ -45,6 +50,9 @@ export function ManagerApp() {
   const [notesDraft, setNotesDraft] = useState("");
 
   const [moveTargetTabId, setMoveTargetTabId] = useState<Id | null>(null);
+  const [licenseModalOpen, setLicenseModalOpen] = useState(false);
+
+  const { isPro } = useLicense();
 
   const refresh = useCallback(async () => {
     const store = await pageBoxService.getStore();
@@ -328,6 +336,84 @@ export function ManagerApp() {
     input.click();
   };
 
+  /**
+   * Pro 特权：一键检测并清理重复的标签页
+   */
+  const handleCleanDuplicates = async () => {
+    if (!isPro) {
+      setLicenseModalOpen(true);
+      return;
+    }
+
+    const seenUrls = new Set<string>();
+    const duplicates: SavedTab[] = [];
+    for (const tab of tabs) {
+      if (seenUrls.has(tab.url)) {
+        duplicates.push(tab);
+      } else {
+        seenUrls.add(tab.url);
+      }
+    }
+
+    if (duplicates.length === 0) {
+      showStatus("未检测到重复标签页，收藏库非常整洁！");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `检测到 ${duplicates.length} 个重复的网页标签，是否一键清理重复项并保留首个？`
+    );
+    if (!confirmed) return;
+
+    for (const dup of duplicates) {
+      await pageBoxService.deleteTab(dup.id);
+    }
+    showStatus(`已智能清理 ${duplicates.length} 个重复网页`);
+    await refresh();
+  };
+
+  /**
+   * Pro 特权：导出为结构化 Markdown 文档
+   */
+  const handleExportMarkdown = async () => {
+    if (!isPro) {
+      setLicenseModalOpen(true);
+      return;
+    }
+
+    const store = await pageBoxService.getStore();
+    let md = `# PageBox 标签页收藏清单\n\n> 导出时间：${new Date().toLocaleString()}\n\n`;
+
+    if (store.tabs.length > 0) {
+      md += `## 标签列表 (${store.tabs.length})\n\n`;
+      for (const tab of store.tabs) {
+        const noteText = tab.notes ? ` —— *${tab.notes}*` : "";
+        md += `- [${tab.title || tab.url}](${tab.url})${noteText}\n`;
+      }
+      md += "\n";
+    }
+
+    if (store.windows.length > 0) {
+      md += `## 窗口集合 (${store.windows.length})\n\n`;
+      for (const win of store.windows) {
+        md += `### ${win.name}\n\n`;
+        for (const tab of win.tabs) {
+          md += `- [${tab.title || tab.url}](${tab.url})\n`;
+        }
+        md += "\n";
+      }
+    }
+
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pagebox-export-${Date.now()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showStatus("Markdown 文档已成功导出");
+  };
+
   const isAllSelected =
     displayedTabs.length > 0 && selectedTabIds.size === displayedTabs.length;
 
@@ -338,6 +424,27 @@ export function ManagerApp() {
         <div className="pagebox-manager__brand">
           <PageBoxLogo size={26} className="pagebox-manager__logo" />
           <h1 className="pagebox-manager__title">PageBox 标签管理中心</h1>
+          {isPro ? (
+            <button
+              type="button"
+              className="pagebox-pro-badge pagebox-pro-badge--active"
+              onClick={() => setLicenseModalOpen(true)}
+              title="Pro 尊享特权生效中，点击查看授权详情"
+            >
+              <CrownIcon size={12} />
+              <span>PRO</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="pagebox-pro-badge pagebox-pro-badge--upgrade"
+              onClick={() => setLicenseModalOpen(true)}
+              title="升级 Pro 解锁高级特权"
+            >
+              <CrownIcon size={12} />
+              <span>升级 Pro</span>
+            </button>
+          )}
         </div>
 
         <div className="pagebox-manager__search-box">
@@ -356,11 +463,25 @@ export function ManagerApp() {
           >
             <PlusIcon size={14} /> 新建文件夹
           </button>
+          <button
+            className="pagebox-btn"
+            onClick={handleCleanDuplicates}
+            title="一键智能清理重复网页"
+          >
+            清理重复
+          </button>
+          <button
+            className="pagebox-btn"
+            onClick={handleExportMarkdown}
+            title="导出为 Markdown 结构化文档"
+          >
+            导出 Markdown
+          </button>
           <button className="pagebox-btn" onClick={handleExport}>
-            导出
+            导出 JSON
           </button>
           <button className="pagebox-btn" onClick={handleImport}>
-            导入
+            导入 JSON
           </button>
         </div>
       </header>
@@ -581,9 +702,12 @@ export function ManagerApp() {
                           <div className="pagebox-window-card__tabs">
                             {win.tabs.slice(0, 4).map((t, i) => (
                               <div key={i} className="pagebox-window-card__tab-preview">
-                                {t.favIconUrl && (
-                                  <img src={t.favIconUrl} alt="" className="preview-icon" />
-                                )}
+                                <TabFavicon
+                                  url={t.url}
+                                  favIconUrl={t.favIconUrl}
+                                  className="preview-icon"
+                                  size={14}
+                                />
                                 <span>{t.title}</span>
                               </div>
                             ))}
@@ -725,15 +849,12 @@ export function ManagerApp() {
                               className="pagebox-tab-row__main"
                               onClick={() => handleRestoreTab(tab)}
                             >
-                              {tab.favIconUrl ? (
-                                <img
-                                  className="pagebox-tab-row__icon"
-                                  src={tab.favIconUrl}
-                                  alt=""
-                                />
-                              ) : (
-                                <span className="pagebox-tab-row__dot" />
-                              )}
+                              <TabFavicon
+                                url={tab.url}
+                                favIconUrl={tab.favIconUrl}
+                                className="pagebox-tab-row__icon"
+                                size={16}
+                              />
                               <div className="pagebox-tab-row__info">
                                 <div className="pagebox-tab-row__title" title={tab.title}>
                                   {tab.title}
@@ -812,13 +933,26 @@ export function ManagerApp() {
       {folderModalOpen && (
         <div className="pagebox-modal-backdrop" onClick={() => setFolderModalOpen(false)}>
           <div className="pagebox-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>新建文件夹</h2>
-            <p className="pagebox-modal__tip">
-              父级位置:{" "}
-              {folderModalParentId
-                ? folders.find((f) => f.id === folderModalParentId)?.name ?? "根目录"
-                : "根目录"}
-            </p>
+            <div className="pagebox-modal-header">
+              <h2>新建文件夹</h2>
+              <button
+                type="button"
+                className="pagebox-modal-close"
+                onClick={() => setFolderModalOpen(false)}
+                title="关闭"
+              >
+                <CloseIcon size={14} />
+              </button>
+            </div>
+            <div className="pagebox-modal__tip">
+              <span className="pagebox-modal__tip-label">父级位置:</span>
+              <span className="pagebox-modal__tip-badge">
+                <FolderYellowIcon size={14} />
+                {folderModalParentId
+                  ? folders.find((f) => f.id === folderModalParentId)?.name ?? "根目录"
+                  : "根目录"}
+              </span>
+            </div>
             <input
               type="text"
               autoFocus
@@ -827,13 +961,18 @@ export function ManagerApp() {
               placeholder="请输入文件夹名称…"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void handleCreateFolder();
+                if (e.key === "Escape") setFolderModalOpen(false);
               }}
             />
             <div className="pagebox-modal__actions">
               <button className="pagebox-btn" onClick={() => setFolderModalOpen(false)}>
                 取消
               </button>
-              <button className="pagebox-btn pagebox-btn--primary" onClick={handleCreateFolder}>
+              <button
+                className="pagebox-btn pagebox-btn--primary"
+                onClick={handleCreateFolder}
+                disabled={!folderModalName.trim()}
+              >
                 创建
               </button>
             </div>
@@ -845,22 +984,37 @@ export function ManagerApp() {
       {renameTarget && (
         <div className="pagebox-modal-backdrop" onClick={() => setRenameTarget(null)}>
           <div className="pagebox-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>重命名文件夹</h2>
+            <div className="pagebox-modal-header">
+              <h2>重命名文件夹</h2>
+              <button
+                type="button"
+                className="pagebox-modal-close"
+                onClick={() => setRenameTarget(null)}
+                title="关闭"
+              >
+                <CloseIcon size={14} />
+              </button>
+            </div>
             <input
               type="text"
               autoFocus
               value={renameDraft}
               onChange={(e) => setRenameDraft(e.target.value)}
-              placeholder="文件夹名称"
+              placeholder="请输入新的文件夹名称"
               onKeyDown={(e) => {
                 if (e.key === "Enter") void handleSaveRename();
+                if (e.key === "Escape") setRenameTarget(null);
               }}
             />
             <div className="pagebox-modal__actions">
               <button className="pagebox-btn" onClick={() => setRenameTarget(null)}>
                 取消
               </button>
-              <button className="pagebox-btn pagebox-btn--primary" onClick={handleSaveRename}>
+              <button
+                className="pagebox-btn pagebox-btn--primary"
+                onClick={handleSaveRename}
+                disabled={!renameDraft.trim()}
+              >
                 保存
               </button>
             </div>
@@ -872,14 +1026,27 @@ export function ManagerApp() {
       {moveTargetTabId && (
         <div className="pagebox-modal-backdrop" onClick={() => setMoveTargetTabId(null)}>
           <div className="pagebox-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>移动标签至文件夹</h2>
+            <div className="pagebox-modal-header">
+              <h2>移动标签至文件夹</h2>
+              <button
+                type="button"
+                className="pagebox-modal-close"
+                onClick={() => setMoveTargetTabId(null)}
+                title="关闭"
+              >
+                <CloseIcon size={14} />
+              </button>
+            </div>
+            <div className="pagebox-modal__tip">
+              <span className="pagebox-modal__tip-label">请选择目标文件夹：</span>
+            </div>
             <div className="pagebox-folder-select-list">
               <button
                 type="button"
                 className="pagebox-folder-select-item"
                 onClick={() => handleMoveTab(null)}
               >
-                📁 未分类（移出文件夹）
+                <FolderYellowIcon size={15} /> 未分类（移出文件夹）
               </button>
               {folders.map((f) => (
                 <button
@@ -888,7 +1055,7 @@ export function ManagerApp() {
                   className="pagebox-folder-select-item"
                   onClick={() => handleMoveTab(f.id)}
                 >
-                  📁 {f.name}
+                  <FolderYellowIcon size={15} /> {f.name}
                 </button>
               ))}
             </div>
@@ -905,12 +1072,34 @@ export function ManagerApp() {
       {notesTarget && (
         <div className="pagebox-modal-backdrop" onClick={() => setNotesTarget(null)}>
           <div className="pagebox-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>编辑备注</h2>
+            <div className="pagebox-modal-header">
+              <h2>编辑备注</h2>
+              <button
+                type="button"
+                className="pagebox-modal-close"
+                onClick={() => setNotesTarget(null)}
+                title="关闭"
+              >
+                <CloseIcon size={14} />
+              </button>
+            </div>
             <textarea
               autoFocus
               value={notesDraft}
               onChange={(e) => setNotesDraft(e.target.value)}
               placeholder="添加备注…"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                  e.preventDefault();
+                  void (async () => {
+                    await pageBoxService.updateTabNotes(notesTarget.id, notesDraft);
+                    setNotesTarget(null);
+                    showStatus("备注已保存");
+                    await refresh();
+                  })();
+                }
+                if (e.key === "Escape") setNotesTarget(null);
+              }}
             />
             <div className="pagebox-modal__actions">
               <button className="pagebox-btn" onClick={() => setNotesTarget(null)}>
@@ -931,6 +1120,11 @@ export function ManagerApp() {
           </div>
         </div>
       )}
+
+      <LicenseModal
+        isOpen={licenseModalOpen}
+        onClose={() => setLicenseModalOpen(false)}
+      />
     </div>
   );
 }

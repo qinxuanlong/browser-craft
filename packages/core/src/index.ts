@@ -19,7 +19,7 @@ function now(): number {
   return Date.now();
 }
 
-function isSaveableUrl(url: string): boolean {
+export function isSaveableUrl(url: string): boolean {
   try {
     const { protocol } = new URL(url);
     return protocol === "http:" || protocol === "https:" || protocol === "file:";
@@ -616,5 +616,55 @@ export async function openManagerPage(): Promise<void> {
     }
   } else {
     await chrome.tabs.create({ url, active: true });
+  }
+}
+
+export * from "./license";
+export { LocalStorageRepository, storageRepository } from "@pagebox/storage";
+
+/**
+ * 监听标签页事件时，自动同步 Favicon 到已保存的书签元数据或窗口快照中
+ */
+export async function syncTabFavicon(url: string, favIconUrl: string): Promise<void> {
+  if (!url || !favIconUrl || !isSaveableUrl(url)) return;
+  // 排除浏览器内置系统页面图标
+  if (
+    favIconUrl.startsWith("chrome://") ||
+    favIconUrl.startsWith("edge://") ||
+    favIconUrl.startsWith("chrome-extension://")
+  ) {
+    return;
+  }
+
+  try {
+    // 1. 同步到浏览器书签对应的元数据
+    if (typeof chrome !== "undefined" && chrome.bookmarks?.search) {
+      const bookmarks = await chrome.bookmarks.search({ url });
+      if (bookmarks && bookmarks.length > 0) {
+        for (const bm of bookmarks) {
+          const meta = await storageRepository.getMetadata(bm.id);
+          if (!meta?.favIconUrl) {
+            await storageRepository.setMetadata(bm.id, { favIconUrl });
+          }
+        }
+      }
+    }
+
+    // 2. 同步到已保存的窗口快照
+    const windows = await storageRepository.getWindows();
+    let windowsChanged = false;
+    for (const win of windows) {
+      for (const tab of win.tabs) {
+        if (tab.url === url && !tab.favIconUrl) {
+          tab.favIconUrl = favIconUrl;
+          windowsChanged = true;
+        }
+      }
+    }
+    if (windowsChanged) {
+      await storageRepository.saveWindows(windows);
+    }
+  } catch (error) {
+    console.error("同步 Favicon 失败:", error);
   }
 }

@@ -4,6 +4,7 @@ export interface IconProps extends SVGProps<SVGSVGElement> {
   size?: number;
   className?: string;
   style?: CSSProperties;
+  title?: string;
 }
 
 /** Windows 风格向右折叠箭头 › */
@@ -455,4 +456,105 @@ export function PageBoxLogo({ size = 24, ...props }: IconProps) {
   );
 }
 
+/** 皇冠 / Pro 尊贵会员图标 */
+export function CrownIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <path
+        d="M2 19H22V21H2V19ZM2 8L7 13L12 5L17 13L22 8V17H2V8Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
 
+/** 绿色对勾/已激活图标 */
+export function CheckCircleIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+      <path
+        d="M8 12L11 15L16 9"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** 密钥图标 */
+export function KeyIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <path
+        d="M14 6C11.79 6 10 7.79 10 10C10 10.74 10.2 11.43 10.56 12.02L4 18.59V21H6.41L8 19.41V18H9.41L11.44 15.97C12.21 16.61 13.06 17 14 17C16.21 17 18 15.21 18 13C18 10.79 16.21 6 14 6ZM14 11C13.45 11 13 10.55 13 10C13 9.45 13.45 9 14 9C14.55 9 15 9.45 15 10C15 10.55 14.55 11 14 11Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+/** 通用关闭叉号图标 */
+export function CloseIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <path
+        d="M4 4L12 12M12 4L4 12"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** 默认地球/网页图标（与 Chrome 原生书签地球图标一致，用于无 Favicon 时的兜底） */
+export function GlobeIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2" />
+      <ellipse cx="8" cy="8" rx="2.8" ry="6.5" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M1.5 8H14.5" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M2.8 4.6H13.2" stroke="currentColor" strokeWidth="1" />
+      <path d="M2.8 11.4H13.2" stroke="currentColor" strokeWidth="1" />
+    </svg>
+  );
+}

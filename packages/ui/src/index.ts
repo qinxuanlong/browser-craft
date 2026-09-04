@@ -4,4 +4,7 @@ export { ManagerApp } from "./ManagerApp";
 export { FolderTree } from "./FolderTree";
 export type { FolderTreeProps } from "./FolderTree";
 export * from "./icons";
-
+export { useLicense } from "./useLicense";
+export { LicenseModal } from "./LicenseModal";
+export type { LicenseModalProps } from "./LicenseModal";
+export * from "./Favicon";

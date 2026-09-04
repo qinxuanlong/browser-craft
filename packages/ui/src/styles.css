@@ -367,43 +367,233 @@ textarea {
   border-top: 1px solid #e8eaf0;
 }
 
-.pagebox-modal-backdrop {
+/* ==========================================================================
+   通用模态框组件 (Modal Component)
+   ========================================================================== */
+
+/* 模态框背景遮罩 */
+.pagebox-modal-backdrop,
+.pagebox-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 1000;
+  padding: 16px;
+  animation: pagebox-fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* 模态框主体卡片 */
 .pagebox-modal {
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px;
-  width: min(320px, 90vw);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 22px 24px;
+  width: min(440px, calc(100vw - 32px));
+  box-shadow: 0 20px 30px -10px rgba(15, 23, 42, 0.18),
+              0 0 0 1px rgba(15, 23, 42, 0.06),
+              0 4px 6px -2px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  animation: pagebox-modal-scale 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.pagebox-modal h2 {
-  margin: 0 0 12px;
-  font-size: 16px;
+@keyframes pagebox-fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pagebox-modal-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* 模态框头部 */
+.pagebox-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.pagebox-modal h2,
+.pagebox-modal-header h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 模态框右上角关闭按钮 */
+.pagebox-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.pagebox-modal-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.pagebox-modal-close:active {
+  background: #e2e8f0;
+}
+
+/* 模态框内部提示/位置指示条 */
+.pagebox-modal__tip {
+  font-size: 13px;
+  color: #475569;
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.5;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+.pagebox-modal__tip-label {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.pagebox-modal__tip-badge {
+  color: #1e293b;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 输入框和文本域统一美化 */
+.pagebox-modal input[type="text"],
+.pagebox-modal input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]) {
+  width: 100%;
+  height: 40px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  box-sizing: border-box;
+  margin-bottom: 18px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pagebox-modal input[type="text"]:hover,
+.pagebox-modal input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]):hover {
+  border-color: #94a3b8;
+}
+
+.pagebox-modal input[type="text"]:focus,
+.pagebox-modal input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]):focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.pagebox-modal input::placeholder {
+  color: #94a3b8;
 }
 
 .pagebox-modal textarea {
   width: 100%;
-  min-height: 80px;
-  padding: 8px;
-  border: 1px solid #d0d5dd;
+  min-height: 90px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
   border-radius: 8px;
   resize: vertical;
-  margin-bottom: 12px;
+  outline: none;
+  box-sizing: border-box;
+  margin-bottom: 18px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.pagebox-modal textarea:hover {
+  border-color: #94a3b8;
+}
+
+.pagebox-modal textarea:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.pagebox-modal textarea::placeholder {
+  color: #94a3b8;
+}
+
+/* 模态框底部按钮区 */
 .pagebox-modal__actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.pagebox-modal__actions .pagebox-btn {
+  min-width: 72px;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pagebox-modal__actions .pagebox-btn--primary {
+  background: #4f46e5;
+  color: #ffffff;
+  border: 1px solid #4338ca;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.pagebox-modal__actions .pagebox-btn--primary:hover {
+  background: #4338ca;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+  transform: translateY(-0.5px);
+}
+
+.pagebox-modal__actions .pagebox-btn--primary:active {
+  transform: translateY(0);
 }
 
 /* 按钮高亮样式（打开管理大页） */
@@ -616,6 +806,7 @@ textarea {
   height: 14px;
   border-radius: 2px;
   flex-shrink: 0;
+  display: block;
 }
 
 .pagebox-tree-item__dot {
@@ -1079,6 +1270,7 @@ textarea {
   height: 16px;
   flex-shrink: 0;
   border-radius: 2px;
+  display: block;
 }
 
 .pagebox-tab-row__dot {
@@ -1247,35 +1439,40 @@ textarea {
   z-index: 999;
 }
 
-.pagebox-modal__tip {
-  font-size: 12px;
-  color: #605e5c;
-  margin: 0 0 10px;
-}
-
 .pagebox-folder-select-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   max-height: 240px;
   overflow-y: auto;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  padding: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
 }
 
 .pagebox-folder-select-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   text-align: left;
-  padding: 8px 12px;
-  border: 1px solid #edebe9;
-  border-radius: 4px;
+  padding: 9px 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
   background: #ffffff;
   font-size: 13px;
+  color: #334155;
   cursor: pointer;
-  transition: background 0.1s;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .pagebox-folder-select-item:hover {
-  background: #f3f2f1;
-  border-color: #0078d4;
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+  transform: translateX(2px);
 }
 
 /* ==========================================================================
@@ -1429,6 +1626,371 @@ textarea {
 .pagebox-sync-modal__footer {
   display: flex;
   justify-content: flex-end;
+}
+
+/* ============================================================
+   PageBox Pro 与 Lemon Squeezy 许可证样式
+   ============================================================ */
+
+/* 头部品牌与附加栏 */
+.pagebox-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.pagebox-header__extra {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Pro 会员徽章 */
+.pagebox-pro-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  line-height: 1.4;
+  transition: all 0.2s ease;
+}
+
+.pagebox-pro-badge--active {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(217, 119, 6, 0.35);
+}
+
+.pagebox-pro-badge--active:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.pagebox-pro-badge--upgrade {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.pagebox-pro-badge--upgrade:hover {
+  background: #fef3c7;
+  border-color: #fcd34d;
+  color: #92400e;
+  transform: translateY(-1px);
+}
+
+/* License 弹窗 */
+.pagebox-license-modal {
+  max-width: 480px;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.pagebox-license-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pagebox-license-header-title h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pagebox-pro-crown-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.pagebox-pro-crown-badge--active {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+}
+
+.pagebox-license-body {
+  padding-top: 14px;
+}
+
+.pagebox-license-lead {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+  margin: 0 0 16px;
+}
+
+/* 特权清单 */
+.pagebox-license-perks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.pagebox-license-perk-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: #1e293b;
+}
+
+.pagebox-license-perk-item p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.pagebox-license-perk-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* 购买入口 */
+.pagebox-license-buy-bar {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.pagebox-btn--buy {
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.35);
+}
+
+.pagebox-btn--buy:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.pagebox-license-buy-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* 分割线 */
+.pagebox-divider {
+  border: none;
+  height: 1px;
+  background: #e2e8f0;
+  margin: 18px 0 16px;
+}
+
+/* 激活表单 */
+.pagebox-license-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pagebox-license-form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.pagebox-license-input-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.pagebox-license-input-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.pagebox-license-input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.pagebox-modal input.pagebox-license-input {
+  width: 100%;
+  height: 40px;
+  margin-bottom: 0 !important;
+  padding: 0 14px 0 38px !important;
+  font-size: 13px;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pagebox-modal input.pagebox-license-input:hover {
+  border-color: #94a3b8;
+}
+
+.pagebox-modal input.pagebox-license-input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.pagebox-modal input.pagebox-license-input::placeholder {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* 激活按钮样式 */
+.pagebox-btn--activate {
+  height: 40px;
+  padding: 0 20px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border: 1px solid #4338ca;
+  background: #4f46e5;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.pagebox-btn--activate:hover:not(:disabled) {
+  background: #4338ca;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+  transform: translateY(-0.5px);
+}
+
+.pagebox-btn--activate:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.pagebox-btn--activate:disabled {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 1;
+  box-shadow: none;
+  transform: none;
+}
+
+/* 状态提示 */
+.pagebox-license-status {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 6px;
+}
+
+.pagebox-license-status--error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+.pagebox-license-status--success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+}
+
+/* 已激活卡片 */
+.pagebox-license-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.pagebox-license-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #16a34a;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.pagebox-license-info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  line-height: 1.9;
+  color: #334155;
+}
+
+.pagebox-license-info-label {
+  color: #64748b;
+}
+
+.pagebox-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.pagebox-license-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.pagebox-btn--outline-danger {
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pagebox-btn--outline-danger:hover {
+  background: #fef2f2;
+  border-color: #f87171;
 }
 
 

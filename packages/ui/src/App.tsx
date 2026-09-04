@@ -2,8 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { openManagerPage, pageBoxService, subscribeToBookmarks } from "@pagebox/core";
 import type { Folder, SavedTab, SavedWindow } from "@pagebox/types";
 import { FolderTree } from "./FolderTree";
+import { TabFavicon } from "./Favicon";
 import {
   BookmarkPlusIcon,
+  CloseIcon,
+  CrownIcon,
   ExternalLinkIcon,
   ExportIcon,
   ImportIcon,
@@ -11,6 +14,8 @@ import {
   SidebarIcon,
   WindowSaveIcon,
 } from "./icons";
+import { LicenseModal } from "./LicenseModal";
+import { useLicense } from "./useLicense";
 import "./styles.css";
 
 export type AppVariant = "popup" | "sidepanel";
@@ -27,6 +32,9 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
   const [status, setStatus] = useState("");
   const [notesTarget, setNotesTarget] = useState<SavedTab | null>(null);
   const [notesDraft, setNotesDraft] = useState("");
+  const [licenseModalOpen, setLicenseModalOpen] = useState(false);
+
+  const { isPro } = useLicense();
 
   const refresh = useCallback(async () => {
     const store = await pageBoxService.getStore();
@@ -143,8 +151,33 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
   return (
     <div className={`pagebox-app pagebox-app--${variant}`}>
       <header className="pagebox-header">
-        <PageBoxLogo size={20} />
-        <h1>PageBox</h1>
+        <div className="pagebox-header__brand">
+          <PageBoxLogo size={20} />
+          <h1>PageBox</h1>
+        </div>
+        <div className="pagebox-header__extra">
+          {isPro ? (
+            <button
+              type="button"
+              className="pagebox-pro-badge pagebox-pro-badge--active"
+              onClick={() => setLicenseModalOpen(true)}
+              title="Pro 尊享特权生效中，点击查看授权"
+            >
+              <CrownIcon size={12} />
+              <span>PRO</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="pagebox-pro-badge pagebox-pro-badge--upgrade"
+              onClick={() => setLicenseModalOpen(true)}
+              title="升级 Pro 解锁高级特权"
+            >
+              <CrownIcon size={12} />
+              <span>升级 Pro</span>
+            </button>
+          )}
+        </div>
       </header>
 
       <div className="pagebox-toolbar">
@@ -254,9 +287,12 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
             {isSearching ? (
               tabs.map((tab) => (
                 <div key={tab.id} className="pagebox-item" onClick={() => handleRestoreTab(tab)}>
-                  {tab.favIconUrl && (
-                    <img className="pagebox-item__icon" src={tab.favIconUrl} alt="" />
-                  )}
+                  <TabFavicon
+                    url={tab.url}
+                    favIconUrl={tab.favIconUrl}
+                    className="pagebox-item__icon"
+                    size={16}
+                  />
                   <div className="pagebox-item__body">
                     <div className="pagebox-item__title">{tab.title}</div>
                     <div className="pagebox-item__url">{tab.url}</div>
@@ -290,11 +326,29 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
       {notesTarget && (
         <div className="pagebox-modal-backdrop" onClick={() => setNotesTarget(null)}>
           <div className="pagebox-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>编辑备注</h2>
+            <div className="pagebox-modal-header">
+              <h2>编辑备注</h2>
+              <button
+                type="button"
+                className="pagebox-modal-close"
+                onClick={() => setNotesTarget(null)}
+                title="关闭"
+              >
+                <CloseIcon size={14} />
+              </button>
+            </div>
             <textarea
+              autoFocus
               value={notesDraft}
               onChange={(e) => setNotesDraft(e.target.value)}
               placeholder="添加备注…"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                  e.preventDefault();
+                  void saveNotes();
+                }
+                if (e.key === "Escape") setNotesTarget(null);
+              }}
             />
             <div className="pagebox-modal__actions">
               <button className="pagebox-btn" onClick={() => setNotesTarget(null)}>
@@ -307,6 +361,11 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
           </div>
         </div>
       )}
+
+      <LicenseModal
+        isOpen={licenseModalOpen}
+        onClose={() => setLicenseModalOpen(false)}
+      />
     </div>
   );
 }
