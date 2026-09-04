@@ -12,6 +12,10 @@
     "lint": {
       "dependsOn": ["^build"]
     },
+    "zip": {
+      "dependsOn": ["^build"],
+      "outputs": [".output/**"]
+    },
     "typecheck": {
       "dependsOn": ["^build"]
     }

@@ -95,12 +95,17 @@ pnpm dev:demo
 # 全量构建所有插件与共享包
 pnpm build
 
-# 单独构建指定插件
+# 单独构建指定插件（未压缩目录）
 pnpm build:pagebox
 pnpm build:demo
+
+# 一键打包为商店上传的 .zip 压缩包
+pnpm zip:pagebox
+pnpm zip:demo
 ```
 
-开发或构建完成后，对应插件会在各自目录下输出 `.output/chrome-mv3`（如 `apps/pagebox/.output/chrome-mv3`）。在 Chrome 中打开 `chrome://extensions` → 开启「开发者模式」→「加载已解压的扩展程序」→ 选择对应插件的 `.output/chrome-mv3` 即可。
+- **本地加载调试**：构建完成后，在 Chrome 打开 `chrome://extensions` → 开启右上角「开发者模式」→ 点击「加载已解压的扩展程序」→ 选择对应的 `.output/chrome-mv3` 文件夹即可。
+- **发布上传商店**：运行 `pnpm zip:pagebox` 后，会在 `apps/pagebox/.output/` 目录下自动生成符合商店要求的 `.zip` 压缩包（如 `appspagebox-0.0.1-chrome.zip`），直接上传至 Chrome 网上应用店或 Edge 外接程序中心即可。
 
 ### 🧩 如何在此仓库新建一个扩展？
 
