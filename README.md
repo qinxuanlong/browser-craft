@@ -23,23 +23,62 @@
 
 ## 项目结构
 
+PageBox 采用基于 **pnpm workspace + Turborepo** 的现代 Monorepo 体系，实现了多插件应用（Apps）与共享公共库（Packages）的清晰解耦：
+
 ```
 PageBox/ (多扩展 Monorepo 体系)
-├── apps/
-│   ├── pagebox/              # PageBox 标签页收藏插件（WXT + React 19）
-│   └── demo-plugin/          # 多插件开发模版/示例扩展
-├── packages/
-│   ├── # --- 通用基础设施层（跨插件复用）---
-│   ├── shared-license/       # 通用 Lemon Squeezy 商业化/会员离线激活服务
-│   ├── shared-utils/         # 跨插件通用浏览器扩展辅助与 WXT 路径修复工具
-│   ├── # --- PageBox 专有业务层 ---
-│   ├── types/                # PageBox 领域实体定义与数据模型
-│   ├── storage/              # PageBox 本地数据仓库封装
-│   ├── core/                 # PageBox 核心业务逻辑（书签同步/导入导出）
-│   └── ui/                   # PageBox 专属管理界面与树组件
-├── pnpm-workspace.yaml
-└── turbo.json
+├── apps/                                   # 浏览器扩展应用层
+│   ├── pagebox/                            # PageBox 核心扩展（WXT + React 19）
+│   │   ├── entrypoints/                    # WXT 约定式入口目录
+│   │   │   ├── background.ts               # 后台 Service Worker（生命周期与事件管理）
+│   │   │   ├── popup/                      # 工具栏弹出面板（快速收藏与轻量浏览）
+│   │   │   ├── sidepanel/                  # 原生侧边栏常驻视图（折叠树与拖拽整理）
+│   │   │   └── manager/                    # 独立全屏管理后台（双向书签同步/导入导出/数据维护）
+│   │   ├── public/                         # 扩展图标与静态资源
+│   │   ├── package.json
+│   │   └── wxt.config.ts                   # WXT 构建与 Vite 扩展配置
+│   └── demo-plugin/                        # 示例与模版扩展（多插件架构参考范例）
+│       ├── entrypoints/popup/              # 示例 Popup 入口
+│       ├── package.json
+│       └── wxt.config.ts
+├── packages/                               # 共享与业务代码包
+│   ├── # --- 跨扩展通用基础设施库 (@workspace/*) ---
+│   ├── shared-license/                     # 商业化 License 激活与离线授权校验服务（Lemon Squeezy）
+│   │   └── src/                            # 包含在线激活、离线缓存与本地白名单调试密钥
+│   ├── shared-utils/                       # 跨扩展公共工具库
+│   │   └── src/                            # 常用 Chrome API 快捷封装、WXT 相对路径修复插件等
+│   ├── # --- PageBox 专用分层业务库 (@pagebox/*) ---
+│   ├── types/                              # 领域实体与 TypeScript 类型契约（PageItem、FolderItem 等）
+│   ├── storage/                            # 本地持久化存储适配层（封装 chrome.storage.local）
+│   ├── core/                               # 核心业务逻辑（书签双向同步、数据导入导出、授权编排）
+│   └── ui/                                 # 共享 React 组件库（FolderTree、ManagerApp、LicenseModal 等）
+├── pnpm-workspace.yaml                     # pnpm 工作区拓扑配置
+├── turbo.json                              # Turborepo 任务管道编排与构建缓存
+├── tsconfig.base.json                      # 共享基础 TypeScript 编译规范
+└── package.json                            # 根工程管理与快捷构建任务
 ```
+
+### 架构分层与职责说明
+
+| 模块层级 | 包 / 目录 | 命名空间 | 核心职责 |
+| :--- | :--- | :--- | :--- |
+| **应用层 (Apps)** | `apps/pagebox` | `@apps/pagebox` | 核心标签页管理插件，集成 Popup、Side Panel、独立 Manager 与 Background 四大形态 |
+| | `apps/demo-plugin` | `@apps/demo-plugin` | 示例与脚手架插件，展示如何快速开箱消费通用基础设施包 |
+| **通用基础设施** | `packages/shared-license` | `@workspace/shared-license` | 通用商业化服务，支持 Lemon Squeezy 激活、离线校验及开发者白名单模拟 |
+| | `packages/shared-utils` | `@workspace/shared-utils` | 跨扩展通用工具库，包含 Chrome API 辅助函数与 WXT 构建相对路径修复插件 |
+| **PageBox 业务层** | `packages/types` | `@pagebox/types` | 核心数据模型与类型定义，作为各包共享的数据契约，零业务依赖 |
+| | `packages/storage` | `@pagebox/storage` | 本地存储适配层，基于 `chrome.storage.local` 提供安全的持久化 CRUD 接口 |
+| | `packages/core` | `@pagebox/core` | 业务中台层，承载浏览器书签双向同步算法、JSON 备份导入导出与 License 桥接 |
+| | `packages/ui` | `@pagebox/ui` | 视图展示层，提供管理后台、文件夹折叠树、授权弹窗及统一样式主题 |
+
+#### 依赖流向说明 (Dependency Flow)
+
+各模块之间遵循严格的单向依赖规范，杜绝循环引用：
+- **`apps/pagebox`** $\rightarrow$ 消费 `@pagebox/ui`、`@pagebox/core` 与 `@workspace/shared-utils`
+- **`@pagebox/ui`** $\rightarrow$ 消费 `@pagebox/core` 与 `@pagebox/types`
+- **`@pagebox/core`** $\rightarrow$ 消费 `@pagebox/storage`、`@pagebox/types` 与 `@workspace/shared-license`
+- **`@pagebox/storage`** $\rightarrow$ 消费 `@pagebox/types`
+- **`@workspace/*`** $\rightarrow$ 独立通用基础设施，不依赖任何 `@pagebox/*` 业务包
 
 ## 快速开始
 
