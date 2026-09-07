@@ -6,14 +6,14 @@
   --bg-primary: #ffffff;
   --bg-sidebar: #fafafa;
   --bg-hover: #f1f5f9;
-  --bg-active: #e0e7ff;
+  --bg-active: #d1fae5;
   --text-primary: #1e293b;
   --text-secondary: #64748b;
   --text-muted: #94a3b8;
   --border-color: #e2e8f0;
-  --accent-color: #3b82f6;
-  --accent-bg: #eff6ff;
-  --accent-dark: #2563eb;
+  --accent-color: #10b981;
+  --accent-bg: #ecfdf5;
+  --accent-dark: #059669;
   --code-bg: #f8fafc;
   --sidebar-width: 250px;
 }
@@ -91,9 +91,9 @@ body, html {
   color: var(--text-primary);
 }
 
-/* 激活态 Tab (完全对标截图蓝色高亮圆角) */
+/* 激活态 Tab (完全对标翠绿高亮圆角) */
 .nav-tab-btn.active {
-  background-color: #3b82f6;
+  background-color: var(--accent-color);
   color: #ffffff;
 }
 
@@ -179,10 +179,10 @@ body, html {
   color: var(--text-primary);
 }
 
-/* 选中行样式 (对标截图加粗与高亮) */
+/* 选中行样式 (微绿底色加粗高亮) */
 .tree-node-row.file-row.active {
-  background-color: #f1f5f9;
-  color: #0f172a;
+  background-color: var(--accent-bg);
+  color: var(--accent-dark);
   font-weight: 600;
 }
 
@@ -228,8 +228,8 @@ body, html {
 }
 
 .file-list-flat .file-node-row.active {
-  background-color: #f1f5f9;
-  color: #0f172a;
+  background-color: var(--accent-bg);
+  color: var(--accent-dark);
   font-weight: 600;
 }
 
