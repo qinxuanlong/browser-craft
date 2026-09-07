@@ -440,6 +440,13 @@ body, html {
   margin: 0;
 }
 
+.viewer-loading-tip {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
 .markdown-viewer-body {
   color: #1e293b;
   line-height: 1.85;

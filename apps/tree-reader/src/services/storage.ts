@@ -1,10 +1,8 @@
-import { FileItem, ReaderSettings } from "../types";
-import { DEMO_PROJECT } from "./demoProject";
+import { ReaderSettings } from "../types";
 
 const SETTINGS_KEY = "treereader_settings";
 const ACTIVE_FILE_KEY = "treereader_active_file";
 const EXPANDED_FOLDERS_KEY = "treereader_expanded_folders";
-const CUSTOM_PROJECT_KEY = "treereader_custom_project";
 
 export const DEFAULT_SETTINGS: ReaderSettings = {
   isSidebarCollapsed: false,
@@ -17,7 +15,7 @@ export const DEFAULT_SETTINGS: ReaderSettings = {
 };
 
 /**
- * 加载用户设置
+ * 加载用户界面偏好设置
  */
 export async function loadSettings(): Promise<ReaderSettings> {
   try {
@@ -33,7 +31,7 @@ export async function loadSettings(): Promise<ReaderSettings> {
 }
 
 /**
- * 保存用户设置
+ * 保存用户界面偏好设置
  */
 export async function saveSettings(settings: ReaderSettings): Promise<void> {
   try {
@@ -106,36 +104,5 @@ export async function saveActiveFileId(id: string): Promise<void> {
     localStorage.setItem(ACTIVE_FILE_KEY, id);
   } catch (error) {
     console.error("保存激活文件失败:", error);
-  }
-}
-
-/**
- * 加载当前挂载的项目
- */
-export async function loadCurrentProject(): Promise<FileItem> {
-  try {
-    if (typeof chrome !== "undefined" && chrome.storage?.local) {
-      const data = await chrome.storage.local.get(CUSTOM_PROJECT_KEY);
-      return data[CUSTOM_PROJECT_KEY] || DEMO_PROJECT;
-    }
-    const local = localStorage.getItem(CUSTOM_PROJECT_KEY);
-    return local ? JSON.parse(local) : DEMO_PROJECT;
-  } catch {
-    return DEMO_PROJECT;
-  }
-}
-
-/**
- * 保存用户自定义导入的项目
- */
-export async function saveCurrentProject(project: FileItem): Promise<void> {
-  try {
-    if (typeof chrome !== "undefined" && chrome.storage?.local) {
-      await chrome.storage.local.set({ [CUSTOM_PROJECT_KEY]: project });
-      return;
-    }
-    localStorage.setItem(CUSTOM_PROJECT_KEY, JSON.stringify(project));
-  } catch (error) {
-    console.error("保存自定义项目失败:", error);
   }
 }

@@ -1,22 +1,27 @@
 import React, { useRef } from "react";
 import { FileItem } from "../../types";
-import { UploadIcon } from "../Icons";
-import { classifyFile } from "../../services/fileClassifier";
+import { FolderOpenIcon } from "../Icons";
+import {
+  openDirectoryViaNativePicker,
+  buildDirectoryFromFileList,
+} from "../../services/localDirectoryService";
 
 interface ProjectFooterProps {
   project: FileItem;
-  onImportProject: (importedProject: FileItem) => void;
-  onResetDemo: () => void;
+  isDemo: boolean;
+  onDirectoryOpened: (newProject: FileItem) => void;
+  onSwitchToDemo: () => void;
 }
 
 export const ProjectFooter: React.FC<ProjectFooterProps> = ({
   project,
-  onImportProject,
-  onResetDemo,
+  isDemo,
+  onDirectoryOpened,
+  onSwitchToDemo,
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fallbackInputRef = useRef<HTMLInputElement>(null);
 
-  // 计算项目下的总文件数
+  // 统计目录下总文件数
   const countFiles = (item: FileItem): number => {
     if (item.type === "file") return 1;
     if (!item.children) return 0;
@@ -25,94 +30,42 @@ export const ProjectFooter: React.FC<ProjectFooterProps> = ({
 
   const totalFiles = countFiles(project);
 
-  // 处理本地文件夹或多文件导入
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 打开本地文件夹（优先使用原生 showDirectoryPicker，降级使用 webkitdirectory）
+  const handleOpenDirectory = async () => {
+    // 1. 尝试原生对话框
+    const result = await openDirectoryViaNativePicker();
+    if (result) {
+      onDirectoryOpened(result);
+      return;
+    }
+
+    // 2. 降级通过 input 选择
+    fallbackInputRef.current?.click();
+  };
+
+  const handleFallbackChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const rootName = files[0].webkitRelativePath
-      ? files[0].webkitRelativePath.split("/")[0]
-      : "本地导入项目";
+    const rootProject = buildDirectoryFromFileList(files);
+    onDirectoryOpened(rootProject);
 
-    const newProject: FileItem = {
-      id: `imported-${Date.now()}`,
-      name: rootName,
-      path: "/",
-      type: "directory",
-      children: [],
-    };
-
-    // 递归组织路径
-    const dirMap = new Map<string, FileItem>();
-    dirMap.set("/", newProject);
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const relPath = file.webkitRelativePath || file.name;
-      const parts = relPath.split("/").filter(Boolean);
-      const filename = parts[parts.length - 1];
-
-      // 仅读取常见文本和代码
-      const { category, language, defaultMode } = classifyFile(filename);
-      const content = await file.text();
-
-      // 构建各级文件夹
-      let currentPath = "";
-      let parent = newProject;
-
-      for (let j = 0; j < parts.length - 1; j++) {
-        currentPath += `/${parts[j]}`;
-        if (!dirMap.has(currentPath)) {
-          const newDir: FileItem = {
-            id: `dir-${currentPath}`,
-            name: parts[j],
-            path: currentPath,
-            type: "directory",
-            children: [],
-          };
-          parent.children = parent.children || [];
-          parent.children.push(newDir);
-          dirMap.set(currentPath, newDir);
-        }
-        parent = dirMap.get(currentPath)!;
-      }
-
-      // 添加文件项
-      const fileItem: FileItem = {
-        id: `file-${relPath}-${Date.now()}-${i}`,
-        name: filename,
-        path: `/${relPath}`,
-        type: "file",
-        extension: filename.split(".").pop() || "",
-        category,
-        language,
-        content,
-        size: file.size,
-      };
-
-      parent.children = parent.children || [];
-      parent.children.push(fileItem);
-    }
-
-    onImportProject(newProject);
-
-    // 清空 input 避免无法重复选择相同目录
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    if (fallbackInputRef.current) {
+      fallbackInputRef.current.value = "";
     }
   };
 
   return (
     <div className="project-footer-container">
-      {/* 隐藏的文件夹/文件选取 input */}
+      {/* 隐藏的降级选择 input */}
       <input
-        ref={fileInputRef}
+        ref={fallbackInputRef}
         type="file"
         multiple
-        // @ts-expect-error webkitdirectory 是原生支持属性
+        // @ts-expect-error webkitdirectory 原生属性
         webkitdirectory=""
         style={{ display: "none" }}
-        onChange={handleFileChange}
+        onChange={handleFallbackChange}
       />
 
       <div className="project-info-row">
@@ -126,21 +79,23 @@ export const ProjectFooter: React.FC<ProjectFooterProps> = ({
         <button
           type="button"
           className="footer-btn import-btn"
-          onClick={() => fileInputRef.current?.click()}
-          title="选取本地文件夹导入"
+          onClick={handleOpenDirectory}
+          title="选择并浏览本地电脑中的文件夹（纯本地只读，不上传不存储）"
         >
-          <UploadIcon size={13} />
-          <span>导入文件夹</span>
+          <FolderOpenIcon size={13} />
+          <span>{isDemo ? "打开本地文件夹" : "切换本地文件夹"}</span>
         </button>
 
-        <button
-          type="button"
-          className="footer-btn reset-btn"
-          onClick={onResetDemo}
-          title="切换回示范小说与代码项目"
-        >
-          恢复示例
-        </button>
+        {!isDemo && (
+          <button
+            type="button"
+            className="footer-btn reset-btn"
+            onClick={onSwitchToDemo}
+            title="切换回示范小说与代码项目"
+          >
+            示例小说
+          </button>
+        )}
       </div>
     </div>
   );

@@ -9,12 +9,14 @@ export interface FileItem {
   name: string;
   path: string;
   type: "file" | "directory";
-  content?: string;
+  content?: string; // 内置示例内容或已加载的内容
   children?: FileItem[];
   extension?: string;
   category?: FileCategory;
   language?: string;
   size?: number;
+  rawFile?: File; // 内存中的 File 对象引用（按需动态读取，绝不持久化存储）
+  fileHandle?: FileSystemFileHandle; // 现代浏览器 FileSystemFileHandle 句柄
 }
 
 export type ViewMode = "markdown" | "code" | "text";
@@ -31,7 +33,7 @@ export interface TocItem {
 
 export interface ReaderSettings {
   isSidebarCollapsed: boolean;
-  fontSize: number; // 默认 16px
+  fontSize: number; // 默认 15px
   showLineNumbers: boolean;
   wordWrap: boolean;
   theme: "light" | "warm" | "green" | "dark";

@@ -15,11 +15,10 @@ import {
   saveExpandedFolders,
   loadActiveFileId,
   saveActiveFileId,
-  loadCurrentProject,
-  saveCurrentProject,
   DEFAULT_SETTINGS,
 } from "./services/storage";
 import { classifyFile } from "./services/fileClassifier";
+import { readFileContent } from "./services/localDirectoryService";
 import { NavTabs } from "./components/Sidebar/NavTabs";
 import { FileTree } from "./components/Sidebar/FileTree";
 import { ProjectFooter } from "./components/Sidebar/ProjectFooter";
@@ -30,9 +29,12 @@ import { PlainTextViewer } from "./components/Viewer/PlainTextViewer";
 import { TocDrawer } from "./components/Viewer/TocDrawer";
 
 export const App: React.FC = () => {
-  // 基础项目与文件状态
+  // 基础项目与文件状态（纯内存，不持久化任何大文本内容）
   const [project, setProject] = useState<FileItem>(DEMO_PROJECT);
+  const [isDemo, setIsDemo] = useState<boolean>(true);
   const [activeFileId, setActiveFileId] = useState<string>("file-main");
+  const [activeContent, setActiveContent] = useState<string>("");
+  const [isLoadingContent, setIsLoadingContent] = useState<boolean>(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
     new Set(["folder-archive"])
   );
@@ -76,31 +78,47 @@ export const App: React.FC = () => {
     return findFileById(project, activeFileId) || findFirstFile(project);
   }, [project, activeFileId, findFileById, findFirstFile]);
 
-  // 初始化加载持久化数据
+  // 初始化加载偏好配置（字号、展开状态等轻量配置）
   useEffect(() => {
     const initData = async () => {
-      const [savedSettings, savedFolders, savedActiveId, savedProject] =
-        await Promise.all([
-          loadSettings(),
-          loadExpandedFolders(),
-          loadActiveFileId(),
-          loadCurrentProject(),
-        ]);
+      const [savedSettings, savedFolders, savedActiveId] = await Promise.all([
+        loadSettings(),
+        loadExpandedFolders(),
+        loadActiveFileId(),
+      ]);
 
       setSettings(savedSettings);
       setExpandedFolders(new Set(savedFolders));
-      setProject(savedProject);
       setActiveFileId(savedActiveId);
     };
 
     void initData();
   }, []);
 
-  // 当激活文件变更时，自动识别并配置适宜的查看模式
+  // 当激活文件变更时，按需动态读取其正文内容（绝不持久化存储）
   useEffect(() => {
-    if (!activeFile) return;
+    if (!activeFile) {
+      setActiveContent("");
+      return;
+    }
+
+    // 自动根据后缀选择适宜的查看模式
     const { defaultMode } = classifyFile(activeFile.name);
     setViewMode(defaultMode);
+
+    let isSubscribed = true;
+    setIsLoadingContent(true);
+
+    void readFileContent(activeFile).then((content) => {
+      if (isSubscribed) {
+        setActiveContent(content);
+        setIsLoadingContent(false);
+      }
+    });
+
+    return () => {
+      isSubscribed = false;
+    };
   }, [activeFile]);
 
   // 切换选中文件
@@ -135,7 +153,10 @@ export const App: React.FC = () => {
   // 调节字号
   const handleFontSizeChange = (delta: number) => {
     setSettings((prev) => {
-      const next = { ...prev, fontSize: Math.max(12, Math.min(26, prev.fontSize + delta)) };
+      const next = {
+        ...prev,
+        fontSize: Math.max(12, Math.min(26, prev.fontSize + delta)),
+      };
       void saveSettings(next);
       return next;
     });
@@ -168,41 +189,41 @@ export const App: React.FC = () => {
     });
   };
 
-  // 导入自定义项目
-  const handleImportProject = (newProject: FileItem) => {
+  // 打开本地目录（纯内存浏览，不写入 storage）
+  const handleDirectoryOpened = (newProject: FileItem) => {
     setProject(newProject);
-    void saveCurrentProject(newProject);
+    setIsDemo(false);
+
     const first = findFirstFile(newProject);
     if (first) {
       setActiveFileId(first.id);
-      void saveActiveFileId(first.id);
     }
-    // 默认展开顶层目录
+
+    // 默认展开首层目录
     const topDirs = (newProject.children || [])
       .filter((c) => c.type === "directory")
       .map((c) => c.id);
     setExpandedFolders(new Set(topDirs));
-    void saveExpandedFolders(topDirs);
   };
 
-  // 恢复默认示例
-  const handleResetDemo = () => {
+  // 切换回演示小说
+  const handleSwitchToDemo = () => {
     setProject(DEMO_PROJECT);
-    void saveCurrentProject(DEMO_PROJECT);
+    setIsDemo(true);
     setActiveFileId("file-main");
-    void saveActiveFileId("file-main");
     setExpandedFolders(new Set(["folder-archive"]));
-    void saveExpandedFolders(["folder-archive"]);
     setSearchQuery("");
   };
 
   return (
     <div className="treereader-root">
-      {/* 左侧侧边栏 (导航 + 文件树 + 纯净状态栏) */}
+      {/* 左侧侧边栏 (导航 + 文件树 + 纯净目录状态栏) */}
       <aside
-        className={`treereader-sidebar ${settings.isSidebarCollapsed ? "collapsed" : ""}`}
+        className={`treereader-sidebar ${
+          settings.isSidebarCollapsed ? "collapsed" : ""
+        }`}
       >
-        {/* 顶部 Tab 导航 (对标原图四个图标) */}
+        {/* 顶部 Tab 导航 */}
         <NavTabs
           activeTab={settings.activeTab}
           onTabChange={handleTabChange}
@@ -230,7 +251,9 @@ export const App: React.FC = () => {
                 <button
                   key={cat}
                   type="button"
-                  className={`filter-chip ${settings.filterCategory === cat ? "active" : ""}`}
+                  className={`filter-chip ${
+                    settings.filterCategory === cat ? "active" : ""
+                  }`}
                   onClick={() =>
                     setSettings((prev) => ({ ...prev, filterCategory: cat }))
                   }
@@ -248,7 +271,7 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* 文件树核心组件 (对标原图树形布局) */}
+        {/* 文件树核心组件 */}
         <FileTree
           project={project}
           activeFileId={activeFileId}
@@ -260,17 +283,18 @@ export const App: React.FC = () => {
           onToggleFolder={handleToggleFolder}
         />
 
-        {/* 纯净底栏状态 (无收费广告) */}
+        {/* 底部目录栏（打开本地文件夹 / 纯只读查看） */}
         <ProjectFooter
           project={project}
-          onImportProject={handleImportProject}
-          onResetDemo={handleResetDemo}
+          isDemo={isDemo}
+          onDirectoryOpened={handleDirectoryOpened}
+          onSwitchToDemo={handleSwitchToDemo}
         />
       </aside>
 
       {/* 右侧主查看与阅读视窗 */}
       <main className="treereader-main">
-        {/* 顶置控制栏 (对标截图) */}
+        {/* 顶置控制栏 */}
         <ViewerHeader
           isSidebarCollapsed={settings.isSidebarCollapsed}
           viewMode={viewMode}
@@ -279,7 +303,7 @@ export const App: React.FC = () => {
           fontSize={settings.fontSize}
           hasToc={tocList.length > 0}
           isTocOpen={isTocOpen}
-          currentContent={activeFile?.content || ""}
+          currentContent={activeContent}
           onToggleSidebar={handleToggleSidebar}
           onViewModeChange={setViewMode}
           onToggleLineNumbers={handleToggleLineNumbers}
@@ -289,33 +313,43 @@ export const App: React.FC = () => {
         />
 
         {/* 主内容区域 */}
-        <div className={`viewer-content-viewport ${viewMode !== "markdown" ? "full-width" : ""}`}>
-          {viewMode === "markdown" && (
-            <MarkdownViewer
-              content={activeFile?.content || ""}
-              fontSize={settings.fontSize}
-              wordWrap={settings.wordWrap}
-              onTocExtracted={setTocList}
-            />
-          )}
+        <div
+          className={`viewer-content-viewport ${
+            viewMode !== "markdown" ? "full-width" : ""
+          }`}
+        >
+          {isLoadingContent ? (
+            <div className="viewer-loading-tip">正在读取文件内容...</div>
+          ) : (
+            <>
+              {viewMode === "markdown" && (
+                <MarkdownViewer
+                  content={activeContent}
+                  fontSize={settings.fontSize}
+                  wordWrap={settings.wordWrap}
+                  onTocExtracted={setTocList}
+                />
+              )}
 
-          {viewMode === "code" && (
-            <CodeViewer
-              code={activeFile?.content || ""}
-              language={activeFile?.language || "typescript"}
-              fontSize={settings.fontSize}
-              showLineNumbers={settings.showLineNumbers}
-              wordWrap={settings.wordWrap}
-            />
-          )}
+              {viewMode === "code" && (
+                <CodeViewer
+                  code={activeContent}
+                  language={activeFile?.language || "typescript"}
+                  fontSize={settings.fontSize}
+                  showLineNumbers={settings.showLineNumbers}
+                  wordWrap={settings.wordWrap}
+                />
+              )}
 
-          {viewMode === "text" && (
-            <PlainTextViewer
-              text={activeFile?.content || ""}
-              fontSize={settings.fontSize}
-              showLineNumbers={settings.showLineNumbers}
-              wordWrap={settings.wordWrap}
-            />
+              {viewMode === "text" && (
+                <PlainTextViewer
+                  text={activeContent}
+                  fontSize={settings.fontSize}
+                  showLineNumbers={settings.showLineNumbers}
+                  wordWrap={settings.wordWrap}
+                />
+              )}
+            </>
           )}
         </div>
 
