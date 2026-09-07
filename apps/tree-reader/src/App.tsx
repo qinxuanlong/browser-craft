@@ -17,7 +17,6 @@ import {
 import { classifyFile } from "./services/fileClassifier";
 import {
   readFileContent,
-  openDirectoryViaNativePicker,
   buildDirectoryFromFileList,
 } from "./services/localDirectoryService";
 import { NavTabs } from "./components/Sidebar/NavTabs";
@@ -205,11 +204,20 @@ export const App: React.FC = () => {
     setExpandedFolders(new Set(topDirs));
   };
 
-  // 快捷打开文件夹
-  const handleTriggerOpen = async () => {
-    const result = await openDirectoryViaNativePicker();
-    if (result) {
-      handleDirectoryOpened(result);
+  const globalFolderInputRef = useRef<HTMLInputElement>(null);
+
+  // 快捷打开文件夹（直接触发系统标准选择器，无浏览器创建副本弹窗）
+  const handleTriggerOpen = () => {
+    globalFolderInputRef.current?.click();
+  };
+
+  const handleGlobalFolderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const rootProject = buildDirectoryFromFileList(files);
+    handleDirectoryOpened(rootProject);
+    if (globalFolderInputRef.current) {
+      globalFolderInputRef.current.value = "";
     }
   };
 
@@ -222,7 +230,7 @@ export const App: React.FC = () => {
     setSearchQuery("");
   };
 
-  // 拖拽文件夹进入窗口快速打开
+  // 拖拽文件夹进入窗口快速打开（纯本地只读，不触发复制权限确认）
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingOver(true);
@@ -237,54 +245,6 @@ export const App: React.FC = () => {
     e.preventDefault();
     setIsDraggingOver(false);
 
-    const items = e.dataTransfer.items;
-    if (items && items.length > 0) {
-      // 检查是否原生支持 getAsFileSystemHandle
-      // @ts-expect-error DataTransferItem getAsFileSystemHandle
-      if (typeof items[0].getAsFileSystemHandle === "function") {
-        // @ts-expect-error DataTransferItem getAsFileSystemHandle
-        const handle = await items[0].getAsFileSystemHandle();
-        if (handle && handle.kind === "directory") {
-          // 通过句柄打开
-          const rootItem: FileItem = {
-            id: `dir-${handle.name}`,
-            name: handle.name,
-            path: `/${handle.name}`,
-            type: "directory",
-            children: [],
-          };
-          async function scan(currentHandle: any, parent: FileItem, curPath: string) {
-            for await (const [name, entry] of currentHandle.entries()) {
-              const itemPath = `${curPath}/${name}`;
-              if (entry.kind === "directory") {
-                const sub: FileItem = { id: `dir-${itemPath}`, name, path: itemPath, type: "directory", children: [] };
-                parent.children = parent.children || [];
-                parent.children.push(sub);
-                await scan(entry, sub, itemPath);
-              } else {
-                const { category, language } = classifyFile(name);
-                parent.children = parent.children || [];
-                parent.children.push({
-                  id: `file-${itemPath}`,
-                  name,
-                  path: itemPath,
-                  type: "file",
-                  extension: name.split(".").pop() || "",
-                  category,
-                  language,
-                  fileHandle: entry,
-                });
-              }
-            }
-          }
-          await scan(handle, rootItem, `/${handle.name}`);
-          handleDirectoryOpened(rootItem);
-          return;
-        }
-      }
-    }
-
-    // 降级使用 files
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const rootProject = buildDirectoryFromFileList(e.dataTransfer.files);
       handleDirectoryOpened(rootProject);
@@ -298,6 +258,17 @@ export const App: React.FC = () => {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* 全局标准文件夹选择器（零安全权限确认、零复制、纯只读） */}
+      <input
+        ref={globalFolderInputRef}
+        type="file"
+        multiple
+        // @ts-expect-error webkitdirectory 原生属性
+        webkitdirectory=""
+        style={{ display: "none" }}
+        onChange={handleGlobalFolderChange}
+      />
+
       {/* 左侧侧边栏 (导航 + 文件树 + 纯净目录状态栏) */}
       <aside
         className={`treereader-sidebar ${

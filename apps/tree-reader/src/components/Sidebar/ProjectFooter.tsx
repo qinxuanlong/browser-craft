@@ -1,10 +1,7 @@
 import React, { useRef } from "react";
 import { FileItem } from "../../types";
 import { FolderOpenIcon } from "../Icons";
-import {
-  openDirectoryViaNativePicker,
-  buildDirectoryFromFileList,
-} from "../../services/localDirectoryService";
+import { buildDirectoryFromFileList } from "../../services/localDirectoryService";
 
 interface ProjectFooterProps {
   project: FileItem | null;
@@ -17,7 +14,7 @@ export const ProjectFooter: React.FC<ProjectFooterProps> = ({
   onDirectoryOpened,
   onCloseDirectory,
 }) => {
-  const fallbackInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   // 统计目录下总文件数
   const countFiles = (item: FileItem): number => {
@@ -28,39 +25,34 @@ export const ProjectFooter: React.FC<ProjectFooterProps> = ({
 
   const totalFiles = project ? countFiles(project) : 0;
 
-  // 打开本地文件夹（优先使用原生 showDirectoryPicker，降级使用 webkitdirectory）
-  const handleOpenDirectory = async () => {
-    const result = await openDirectoryViaNativePicker();
-    if (result) {
-      onDirectoryOpened(result);
-      return;
-    }
-    fallbackInputRef.current?.click();
+  // 打开本地文件夹（直接通过系统标准文件夹选择器，无任何创建副本或安全权限弹窗）
+  const handleOpenDirectory = () => {
+    folderInputRef.current?.click();
   };
 
-  const handleFallbackChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFolderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     const rootProject = buildDirectoryFromFileList(files);
     onDirectoryOpened(rootProject);
 
-    if (fallbackInputRef.current) {
-      fallbackInputRef.current.value = "";
+    if (folderInputRef.current) {
+      folderInputRef.current.value = "";
     }
   };
 
   return (
     <div className="project-footer-container">
-      {/* 隐藏的降级选择 input */}
+      {/* 原生系统标准文件夹选择器（零弹窗、零复制、纯只读） */}
       <input
-        ref={fallbackInputRef}
+        ref={folderInputRef}
         type="file"
         multiple
         // @ts-expect-error webkitdirectory 原生属性
         webkitdirectory=""
         style={{ display: "none" }}
-        onChange={handleFallbackChange}
+        onChange={handleFolderChange}
       />
 
       {project ? (
