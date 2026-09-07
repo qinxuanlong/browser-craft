@@ -13,7 +13,19 @@ export default defineConfig({
     version: "0.0.1",
     permissions: ["storage", "tabs"],
     action: {
-      default_title: "打开 TreeReader 树读",
+      default_title: "TreeReader — 树读",
+      default_icon: {
+        16: "icons/icon-16.png",
+        32: "icons/icon-32.png",
+        48: "icons/icon-48.png",
+        128: "icons/icon-128.png",
+      },
+    },
+    icons: {
+      16: "icons/icon-16.png",
+      32: "icons/icon-32.png",
+      48: "icons/icon-48.png",
+      128: "icons/icon-128.png",
     },
   },
   vite: () => ({
