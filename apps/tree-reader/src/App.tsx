@@ -425,16 +425,16 @@ export const App: React.FC = () => {
               <div className="welcome-logo-badge">
                 <img
                   src="/icons/icon-128.png"
-                  alt="TreeReader"
+                  alt="PageBox 目录速览"
                   className="welcome-logo-img"
                   onError={(e) => {
                     (e.target as HTMLElement).style.display = "none";
                   }}
                 />
               </div>
-              <h1 className="welcome-title">TreeReader — 树读</h1>
+              <h1 className="welcome-title">PageBox — 目录速览</h1>
               <p className="welcome-subtitle">
-                专为本地小说、文档大纲与代码打造的轻量级目录树查看器
+                专为本地多级目录树、结构化文本与代码打造的极速查看器
               </p>
 
               <div className="welcome-action-box">

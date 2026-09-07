@@ -8,12 +8,12 @@ export default defineConfig({
     disabled: true,
   },
   manifest: {
-    name: "TreeReader — 树读",
-    description: "结构化文本、代码与多级目录树独立标签页阅读器",
+    name: "PageBox — 目录速览",
+    description: "本地多级目录树、结构化文本与代码极速查看器",
     version: "0.0.1",
     permissions: ["storage", "tabs"],
     action: {
-      default_title: "TreeReader — 树读",
+      default_title: "PageBox — 目录速览",
       default_icon: {
         16: "icons/icon-16.png",
         32: "icons/icon-32.png",

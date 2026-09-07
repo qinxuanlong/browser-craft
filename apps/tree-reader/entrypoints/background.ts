@@ -1,10 +1,10 @@
 export default defineBackground(() => {
-  // 点击浏览器工具栏扩展图标时，直接在新标签页中打开 TreeReader
+  // 点击浏览器工具栏扩展图标时，直接在新标签页中打开 PageBox 目录速览
   chrome.action.onClicked.addListener(async () => {
     const targetUrl = chrome.runtime.getURL("reader.html");
 
     try {
-      // 查找当前浏览器中是否已经有已打开的 TreeReader 标签页
+      // 查找当前浏览器中是否已经有已打开的 PageBox 目录速览标签页
       const existingTabs = await chrome.tabs.query({ url: `${targetUrl}*` });
       const firstTab = existingTabs[0];
 
@@ -19,7 +19,7 @@ export default defineBackground(() => {
         await chrome.tabs.create({ url: targetUrl });
       }
     } catch (error) {
-      console.error("打开 TreeReader 标签页失败:", error);
+      console.error("打开 PageBox 目录速览标签页失败:", error);
     }
   });
 });
