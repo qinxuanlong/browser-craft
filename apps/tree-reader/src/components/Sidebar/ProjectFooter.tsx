@@ -7,17 +7,15 @@ import {
 } from "../../services/localDirectoryService";
 
 interface ProjectFooterProps {
-  project: FileItem;
-  isDemo: boolean;
+  project: FileItem | null;
   onDirectoryOpened: (newProject: FileItem) => void;
-  onSwitchToDemo: () => void;
+  onCloseDirectory?: () => void;
 }
 
 export const ProjectFooter: React.FC<ProjectFooterProps> = ({
   project,
-  isDemo,
   onDirectoryOpened,
-  onSwitchToDemo,
+  onCloseDirectory,
 }) => {
   const fallbackInputRef = useRef<HTMLInputElement>(null);
 
@@ -28,18 +26,15 @@ export const ProjectFooter: React.FC<ProjectFooterProps> = ({
     return item.children.reduce((acc, child) => acc + countFiles(child), 0);
   };
 
-  const totalFiles = countFiles(project);
+  const totalFiles = project ? countFiles(project) : 0;
 
   // 打开本地文件夹（优先使用原生 showDirectoryPicker，降级使用 webkitdirectory）
   const handleOpenDirectory = async () => {
-    // 1. 尝试原生对话框
     const result = await openDirectoryViaNativePicker();
     if (result) {
       onDirectoryOpened(result);
       return;
     }
-
-    // 2. 降级通过 input 选择
     fallbackInputRef.current?.click();
   };
 
@@ -68,35 +63,49 @@ export const ProjectFooter: React.FC<ProjectFooterProps> = ({
         onChange={handleFallbackChange}
       />
 
-      <div className="project-info-row">
-        <div className="project-title-text" title={project.name}>
-          📁 {project.name}
-        </div>
-        <div className="project-count-badge">共 {totalFiles} 个文件</div>
-      </div>
+      {project ? (
+        <>
+          <div className="project-info-row">
+            <div className="project-title-text" title={project.name}>
+              📁 {project.name}
+            </div>
+            <div className="project-count-badge">共 {totalFiles} 个文件</div>
+          </div>
 
-      <div className="project-action-buttons">
+          <div className="project-action-buttons">
+            <button
+              type="button"
+              className="footer-btn import-btn"
+              onClick={handleOpenDirectory}
+              title="切换其他本地文件夹"
+            >
+              <FolderOpenIcon size={13} />
+              <span>切换文件夹</span>
+            </button>
+
+            {onCloseDirectory && (
+              <button
+                type="button"
+                className="footer-btn reset-btn"
+                onClick={onCloseDirectory}
+                title="关闭当前目录"
+              >
+                关闭
+              </button>
+            )}
+          </div>
+        </>
+      ) : (
         <button
           type="button"
-          className="footer-btn import-btn"
+          className="footer-btn import-btn full-btn"
           onClick={handleOpenDirectory}
-          title="选择并浏览本地电脑中的文件夹（纯本地只读，不上传不存储）"
+          title="选择并浏览本地电脑中的文件夹"
         >
-          <FolderOpenIcon size={13} />
-          <span>{isDemo ? "打开本地文件夹" : "切换本地文件夹"}</span>
+          <FolderOpenIcon size={14} />
+          <span>打开本地文件夹</span>
         </button>
-
-        {!isDemo && (
-          <button
-            type="button"
-            className="footer-btn reset-btn"
-            onClick={onSwitchToDemo}
-            title="切换回示范小说与代码项目"
-          >
-            示例小说
-          </button>
-        )}
-      </div>
+      )}
     </div>
   );
 };

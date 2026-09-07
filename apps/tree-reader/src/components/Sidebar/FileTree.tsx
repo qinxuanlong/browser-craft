@@ -11,7 +11,7 @@ import {
 } from "../Icons";
 
 interface FileTreeProps {
-  project: FileItem;
+  project: FileItem | null;
   activeFileId: string;
   expandedFolders: Set<string>;
   filterCategory: FilterCategory;
@@ -19,6 +19,7 @@ interface FileTreeProps {
   isListView?: boolean;
   onSelectFile: (file: FileItem) => void;
   onToggleFolder: (folderId: string) => void;
+  onOpenDirectory?: () => void;
 }
 
 export const FileTree: React.FC<FileTreeProps> = ({
@@ -30,6 +31,7 @@ export const FileTree: React.FC<FileTreeProps> = ({
   isListView = false,
   onSelectFile,
   onToggleFolder,
+  onOpenDirectory,
 }) => {
   // 获取文件专属图标
   const renderFileIcon = (file: FileItem) => {
@@ -60,7 +62,8 @@ export const FileTree: React.FC<FileTreeProps> = ({
   };
 
   // 收集所有平铺文件（用于列表视图）
-  const getAllFiles = (item: FileItem): FileItem[] => {
+  const getAllFiles = (item: FileItem | null): FileItem[] => {
+    if (!item) return [];
     let files: FileItem[] = [];
     if (item.type === "file") {
       if (matchesFilter(item) && matchesSearch(item)) {
@@ -73,6 +76,26 @@ export const FileTree: React.FC<FileTreeProps> = ({
     }
     return files;
   };
+
+  // 如果没有打开任何项目
+  if (!project) {
+    return (
+      <div className="file-tree-empty-welcome">
+        <div className="empty-tree-icon">📂</div>
+        <div className="empty-tree-title">未打开任何本地目录</div>
+        <div className="empty-tree-desc">选择一个本地小说、文档或代码文件夹直接只读查看</div>
+        {onOpenDirectory && (
+          <button
+            type="button"
+            className="empty-open-btn"
+            onClick={onOpenDirectory}
+          >
+            打开本地文件夹
+          </button>
+        )}
+      </div>
+    );
+  }
 
   // 渲染平铺列表视图
   if (isListView) {
