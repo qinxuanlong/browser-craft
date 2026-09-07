@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@workspace/shared-utils": "workspace:*",
+    "marked": "^18.0.11",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

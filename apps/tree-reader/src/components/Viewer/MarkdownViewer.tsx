@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from "react";
+import { Marked } from "marked";
 import { TocItem } from "../../types";
 
 interface MarkdownViewerProps {
@@ -14,119 +15,47 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   wordWrap,
   onTocExtracted,
 }) => {
-  // 解析 Markdown 并提取 TOC 大纲
-  const { renderedElements, tocList } = useMemo(() => {
+  // 解析 Markdown 并提取 TOC 章节目录
+  const { html, tocList } = useMemo(() => {
     if (!content) {
-      return { renderedElements: [], tocList: [] };
+      return { html: "", tocList: [] };
     }
 
-    const lines = content.split("\n");
-    const elements: React.ReactNode[] = [];
     const tocs: TocItem[] = [];
+    let headingCount = 0;
 
-    let inCodeBlock = false;
-    let codeBlockLines: string[] = [];
-    let currentParagraph: string[] = [];
-    let headingIndex = 0;
-
-    const flushParagraph = () => {
-      if (currentParagraph.length > 0) {
-        const text = currentParagraph.join("\n");
-        elements.push(
-          <p key={`p-${elements.length}`} className="reader-paragraph">
-            {text}
-          </p>
-        );
-        currentParagraph = [];
-      }
-    };
-
-    lines.forEach((rawLine, idx) => {
-      const line = rawLine.trimEnd();
-
-      // 代码块判定 ```
-      if (line.startsWith("```")) {
-        if (inCodeBlock) {
-          elements.push(
-            <pre key={`code-${idx}`} className="reader-code-block">
-              <code>{codeBlockLines.join("\n")}</code>
-            </pre>
-          );
-          codeBlockLines = [];
-          inCodeBlock = false;
-        } else {
-          flushParagraph();
-          inCodeBlock = true;
-        }
-        return;
-      }
-
-      if (inCodeBlock) {
-        codeBlockLines.push(rawLine);
-        return;
-      }
-
-        // 标题判定: #, ##, ###, ####, #####, ###### 或者 ###1. 这种网文常见格式
-        const headingMatch = line.match(/^(#{1,6})\s*(.*)$/);
-        if (headingMatch) {
-          flushParagraph();
-          const level = Math.min(Math.max(headingMatch[1].length, 1), 6);
-          const text = headingMatch[2] || "";
-          const headingId = `heading-${headingIndex++}`;
-
-          tocs.push({ id: headingId, level, text });
-
-          const HeadingTag = `h${level}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
-          elements.push(
-            <HeadingTag
-              key={`h-${idx}`}
-              id={headingId}
-              className={`reader-heading reader-h${level}`}
-            >
-              {line}
-            </HeadingTag>
-          );
-          return;
-        }
-
-      // 引用块 >
-      if (line.startsWith(">")) {
-        flushParagraph();
-        elements.push(
-          <blockquote key={`quote-${idx}`} className="reader-quote">
-            {line.replace(/^>\s*/, "")}
-          </blockquote>
-        );
-        return;
-      }
-
-      // 列表项 - 或 *
-      if (line.match(/^[-*]\s+/)) {
-        flushParagraph();
-        elements.push(
-          <li key={`li-${idx}`} className="reader-list-item">
-            {line.replace(/^[-*]\s+/, "")}
-          </li>
-        );
-        return;
-      }
-
-      // 空行：刷新段落
-      if (line.trim() === "") {
-        flushParagraph();
-        return;
-      }
-
-      // 普通正文行（小说自然段）
-      currentParagraph.push(line);
+    const md = new Marked({
+      gfm: true,
+      breaks: true,
     });
 
-    flushParagraph();
+    md.use({
+      renderer: {
+        heading({ tokens, depth, text }) {
+          const headingId = `heading-${headingCount++}`;
+          // 纯文本化处理大纲目录（去除加粗、代码、斜体等标记符号）
+          const cleanText = text.replace(/[*_`~#]/g, "").trim() || text;
+          tocs.push({ id: headingId, level: depth, text: cleanText });
 
-    return { renderedElements: elements, tocList: tocs };
+          const inlineHtml = this.parser.parseInline(tokens);
+          return `<h${depth} id="${headingId}" class="reader-heading reader-h${depth}">${inlineHtml}</h${depth}>\n`;
+        },
+        link({ href, title, tokens }) {
+          const inlineHtml = this.parser.parseInline(tokens);
+          const titleAttr = title ? ` title="${title}"` : "";
+          return `<a href="${href}" target="_blank" rel="noopener noreferrer"${titleAttr}>${inlineHtml}</a>`;
+        },
+      },
+    });
+
+    // 预处理：网文及部分格式无空格标题兼容（例如：###第1章 旅途开始 -> ### 第1章 旅途开始）
+    const preprocessed = content.replace(/^(#{1,6})([^\s#])/gm, "$1 $2");
+    const parsedHtml = md.parse(preprocessed) as string;
+
+    return { html: parsedHtml, tocList: tocs };
   }, [content]);
 
-  // 将提取好的大纲同步给外层
+  // 将提取好的大纲同步给外层状态
   useEffect(() => {
     onTocExtracted(tocList);
   }, [tocList, onTocExtracted]);
@@ -136,11 +65,15 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
       className={`markdown-viewer-body ${wordWrap ? "wrap" : "nowrap"}`}
       style={{ fontSize: `${fontSize}px` }}
     >
-      {renderedElements.length > 0 ? (
-        renderedElements
+      {html ? (
+        <div
+          className="markdown-content-rendered"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
       ) : (
         <div className="viewer-empty-placeholder">暂无文本内容</div>
       )}
     </div>
   );
 };
+
