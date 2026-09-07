@@ -37,8 +37,13 @@ PageBox/ (多扩展 Monorepo 体系)
 │   │   ├── public/                         # 扩展图标与静态资源
 │   │   ├── package.json
 │   │   └── wxt.config.ts                   # WXT 构建与 Vite 扩展配置
-│   └── demo-plugin/                        # 示例与模版扩展（多插件架构参考范例）
-│       ├── entrypoints/popup/              # 示例 Popup 入口
+│   ├── demo-plugin/                        # 示例与模版扩展（多插件架构参考范例）
+│   │   ├── entrypoints/popup/              # 示例 Popup 入口
+│   │   ├── package.json
+│   │   └── wxt.config.ts
+│   └── tree-reader/                        # TreeReader 结构化文本/代码与目录树侧边栏扩展
+│       ├── entrypoints/sidepanel/          # 原生侧边栏主视窗（多级文件树 + 沉浸阅读引擎）
+│       ├── src/                            # 文件树、多模态阅读器、代码高亮组件
 │       ├── package.json
 │       └── wxt.config.ts
 ├── packages/                               # 共享与业务代码包
@@ -64,6 +69,7 @@ PageBox/ (多扩展 Monorepo 体系)
 | :--- | :--- | :--- | :--- |
 | **应用层 (Apps)** | `apps/pagebox` | `@apps/pagebox` | 核心标签页管理插件，集成 Popup、Side Panel、独立 Manager 与 Background 四大形态 |
 | | `apps/demo-plugin` | `@apps/demo-plugin` | 示例与脚手架插件，展示如何快速开箱消费通用基础设施包 |
+| | `apps/tree-reader` | `@apps/tree-reader` | 树读插件，提供文件树导航与沉浸式 Markdown、代码高亮和纯文本查看 |
 | **通用基础设施** | `packages/shared-license` | `@workspace/shared-license` | 通用商业化服务，支持 Lemon Squeezy 激活、离线校验及开发者白名单模拟 |
 | | `packages/shared-utils` | `@workspace/shared-utils` | 跨扩展通用工具库，包含 Chrome API 辅助函数与 WXT 构建相对路径修复插件 |
 | **PageBox 业务层** | `packages/types` | `@pagebox/types` | 核心数据模型与类型定义，作为各包共享的数据契约，零业务依赖 |
@@ -75,6 +81,7 @@ PageBox/ (多扩展 Monorepo 体系)
 
 各模块之间遵循严格的单向依赖规范，杜绝循环引用：
 - **`apps/pagebox`** $\rightarrow$ 消费 `@pagebox/ui`、`@pagebox/core` 与 `@workspace/shared-utils`
+- **`apps/tree-reader`** $\rightarrow$ 消费 `@workspace/shared-utils`
 - **`@pagebox/ui`** $\rightarrow$ 消费 `@pagebox/core` 与 `@pagebox/types`
 - **`@pagebox/core`** $\rightarrow$ 消费 `@pagebox/storage`、`@pagebox/types` 与 `@workspace/shared-license`
 - **`@pagebox/storage`** $\rightarrow$ 消费 `@pagebox/types`
@@ -89,6 +96,9 @@ pnpm install
 # 单独调试 PageBox 插件（热更新）
 pnpm dev:pagebox
 
+# 单独调试 TreeReader 树读插件（热更新）
+pnpm dev:reader
+
 # 单独调试 Demo 示例插件（热更新）
 pnpm dev:demo
 
@@ -97,10 +107,12 @@ pnpm build
 
 # 单独构建指定插件（未压缩目录）
 pnpm build:pagebox
+pnpm build:reader
 pnpm build:demo
 
 # 一键打包为商店上传的 .zip 压缩包
 pnpm zip:pagebox
+pnpm zip:reader
 pnpm zip:demo
 ```
 
