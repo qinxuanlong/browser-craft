@@ -710,6 +710,8 @@ function ManagerAppInner() {
                 setQuery(term);
               }}
               showStatus={showStatus}
+              isPro={isPro}
+              onOpenLicense={() => setLicenseModalOpen(true)}
             />
           ) : activeNav === "settings" ? (
             <SettingsView

@@ -9,6 +9,7 @@ import {
   ChartBarIcon,
   CheckCircleIcon,
   CloseIcon,
+  CrownIcon,
   ExternalLinkIcon,
   FireIcon,
   FolderYellowIcon,
@@ -25,6 +26,8 @@ export interface StatisticsDashboardProps {
   onNavigateFolder?: (folderId: string) => void;
   onSearchFilter?: (query: string) => void;
   showStatus: (msg: string) => void;
+  isPro?: boolean;
+  onOpenLicense?: () => void;
 }
 
 export interface TabWithActivity extends SavedTab {
@@ -47,6 +50,10 @@ export interface ConfirmModalState {
 
 type SubTab = "health" | "structure" | "activity";
 
+// 免费用户配额常量
+export const FREE_DEAD_LINK_QUOTA = 15;
+export const FREE_DUPLICATE_GROUP_QUOTA = 10;
+
 export function StatisticsDashboard({
   tabs,
   folders,
@@ -54,6 +61,8 @@ export function StatisticsDashboard({
   onNavigateFolder,
   onSearchFilter,
   showStatus,
+  isPro = false,
+  onOpenLicense,
 }: StatisticsDashboardProps) {
   const { t } = useTranslation();
   const [activeSubTab, setActiveSubTab] = useState<SubTab>("health");
@@ -253,13 +262,13 @@ export function StatisticsDashboard({
     });
   }, [tabs, historyMap, enableHistoryAux]);
 
-  // 8. 活跃度：常读书签 Top 10（根据综合总访问频次降序）
+  // 8. 活跃度：常读书签（Pro 会员展示 Top 20，免费用户获取 Top 10 并于展示层对 6~10 位加模糊遮罩）
   const topVisitedTabs = useMemo(() => {
     return [...tabsWithActivity]
       .filter((t) => t.combinedVisitCount > 0)
       .sort((a, b) => b.combinedVisitCount - a.combinedVisitCount)
-      .slice(0, 10);
-  }, [tabsWithActivity]);
+      .slice(0, isPro ? 20 : 10);
+  }, [tabsWithActivity, isPro]);
 
   // 9. 活跃度：沉睡/僵尸书签（加入超90天且插件内未打开，若开启辅助且近90天有历史记录访问则自动唤醒排除）
   const { staleBookmarks, awakenedCount } = useMemo(() => {
@@ -309,39 +318,65 @@ export function StatisticsDashboard({
     }
   };
 
-  // 一键清理全部死链（触发二次确认弹窗）
+  // 一键清理死链（触发二次确认弹窗，免费用户单次限额 15 条，超出引导解锁 Pro）
   const handleCleanAllDeadLinks = () => {
     if (!deadLinks || deadLinks.length === 0) return;
+
+    const isOverQuota = !isPro && deadLinks.length > FREE_DEAD_LINK_QUOTA;
+    const targetDeadLinks = isOverQuota
+      ? deadLinks.slice(0, FREE_DEAD_LINK_QUOTA)
+      : deadLinks;
+
     setConfirmModal({
       title: t.statistics.cleanDeadLinksModalTitle,
-      message: t.statistics.cleanDeadLinksConfirm(deadLinks.length),
+      message: isOverQuota
+        ? t.statistics.cleanDeadLinksQuotaNotice(deadLinks.length, FREE_DEAD_LINK_QUOTA)
+        : t.statistics.cleanDeadLinksConfirm(deadLinks.length),
       warning: t.statistics.irreversableWarning,
-      count: deadLinks.length,
-      items: deadLinks.map((d) => ({
+      count: targetDeadLinks.length,
+      items: targetDeadLinks.map((d) => ({
         id: d.tabId,
         title: d.title || d.url,
         subtitle: d.url,
         badge: d.status ? `HTTP ${d.status}` : d.error || t.statistics.deadLinkUnreachable,
       })),
-      confirmText: t.statistics.confirmCleanBtn,
+      confirmText: isOverQuota
+        ? t.statistics.cleanDeadLinksQuotaBtn(FREE_DEAD_LINK_QUOTA)
+        : t.statistics.confirmCleanBtn,
       isDanger: true,
       onConfirm: async () => {
-        await pageBoxService.batchDeleteTabs(deadLinks.map((d) => d.tabId));
-        setDeadLinks([]);
-        showStatus(t.statistics.cleanDeadLinksSuccess);
+        await pageBoxService.batchDeleteTabs(targetDeadLinks.map((d) => d.tabId));
+        const remainingCount = deadLinks.length - targetDeadLinks.length;
+        if (remainingCount > 0) {
+          setDeadLinks((prev) => (prev ? prev.slice(FREE_DEAD_LINK_QUOTA) : []));
+          showStatus(t.statistics.cleanDeadLinksPartialSuccess(targetDeadLinks.length, remainingCount));
+          // 引导解锁 Pro 一键彻底清理全部死链
+          setTimeout(() => {
+            onOpenLicense?.();
+          }, 800);
+        } else {
+          setDeadLinks([]);
+          showStatus(t.statistics.cleanDeadLinksSuccess);
+        }
         await onRefresh();
       },
     });
   };
 
-  // 一键清理所有重复项（每组只保留最早添加的一个，触发二次确认弹窗）
+  // 一键清理所有重复项（免费用户单次限额清理前 10 组，超出引导解锁 Pro）
   const handleCleanAllDuplicates = () => {
     if (totalDuplicateCount === 0) {
       showStatus(t.statistics.noDuplicates);
       return;
     }
+
+    const isOverQuota = !isPro && duplicatesGroup.length > FREE_DUPLICATE_GROUP_QUOTA;
+    const targetGroups = isOverQuota
+      ? duplicatesGroup.slice(0, FREE_DUPLICATE_GROUP_QUOTA)
+      : duplicatesGroup;
+
     const toDeleteTabs: SavedTab[] = [];
-    for (const group of duplicatesGroup) {
+    for (const group of targetGroups) {
       // 保留最早添加的一项，删除其余
       const sorted = [...group.items].sort((a, b) => a.createdAt - b.createdAt);
       for (let i = 1; i < sorted.length; i++) {
@@ -349,9 +384,13 @@ export function StatisticsDashboard({
       }
     }
 
+    const isQuotaCapped = isOverQuota && totalDuplicateCount > toDeleteTabs.length;
+
     setConfirmModal({
       title: t.statistics.cleanDuplicatesModalTitle,
-      message: t.statistics.cleanDuplicatesConfirm(totalDuplicateCount),
+      message: isQuotaCapped
+        ? t.statistics.cleanDuplicatesQuotaNotice(totalDuplicateCount, FREE_DUPLICATE_GROUP_QUOTA)
+        : t.statistics.cleanDuplicatesConfirm(totalDuplicateCount),
       warning: t.statistics.irreversableWarning,
       count: toDeleteTabs.length,
       items: toDeleteTabs.map((tab) => ({
@@ -359,11 +398,21 @@ export function StatisticsDashboard({
         title: tab.title || tab.url,
         subtitle: tab.url,
       })),
-      confirmText: t.statistics.confirmCleanBtn,
+      confirmText: isQuotaCapped
+        ? t.statistics.cleanDuplicatesQuotaBtn(FREE_DUPLICATE_GROUP_QUOTA)
+        : t.statistics.confirmCleanBtn,
       isDanger: true,
       onConfirm: async () => {
         await pageBoxService.batchDeleteTabs(toDeleteTabs.map((t) => t.id));
-        showStatus(t.statistics.cleanDuplicatesSuccess(toDeleteTabs.length));
+        const remainingCount = totalDuplicateCount - toDeleteTabs.length;
+        if (remainingCount > 0) {
+          showStatus(t.statistics.cleanDuplicatesPartialSuccess(toDeleteTabs.length, remainingCount));
+          setTimeout(() => {
+            onOpenLicense?.();
+          }, 800);
+        } else {
+          showStatus(t.statistics.cleanDuplicatesSuccess(toDeleteTabs.length));
+        }
         await onRefresh();
       },
     });
@@ -533,6 +582,14 @@ export function StatisticsDashboard({
               <div className="pagebox-stats__card-title">
                 <AlertTriangleIcon size={18} className="pagebox-stats__icon-warn" />
                 <span>{t.statistics.deadLinkTitle}</span>
+                {!isPro && (
+                  <span
+                    className="pagebox-stats__quota-pill"
+                    title={t.statistics.cleanDeadLinksQuotaNotice(deadLinks?.length ?? 0, FREE_DEAD_LINK_QUOTA)}
+                  >
+                    {t.statistics.freeQuotaTag(FREE_DEAD_LINK_QUOTA)}
+                  </span>
+                )}
               </div>
               <div className="pagebox-stats__card-actions">
                 <button
@@ -545,7 +602,10 @@ export function StatisticsDashboard({
                 </button>
                 {deadLinks && deadLinks.length > 0 && (
                   <button className="pagebox-btn pagebox-btn--danger" onClick={handleCleanAllDeadLinks}>
-                    <TrashIcon size={14} /> {t.statistics.cleanAllDeadLinksWithCount(deadLinks.length)}
+                    <TrashIcon size={14} />{" "}
+                    {!isPro && deadLinks.length > FREE_DEAD_LINK_QUOTA
+                      ? t.statistics.cleanDeadLinksQuotaBtn(FREE_DEAD_LINK_QUOTA)
+                      : t.statistics.cleanAllDeadLinksWithCount(deadLinks.length)}
                   </button>
                 )}
               </div>
@@ -631,10 +691,17 @@ export function StatisticsDashboard({
                 <span className="pagebox-stats__dot-badge" />
                 <span>{t.statistics.duplicatesTitle}</span>
                 <span className="pagebox-stats__counter-tag">{t.statistics.duplicatesCountTag(totalDuplicateCount)}</span>
+                {!isPro && (
+                  <span className="pagebox-stats__quota-pill">
+                    {t.statistics.freeQuotaGroupTag(FREE_DUPLICATE_GROUP_QUOTA)}
+                  </span>
+                )}
               </div>
               {totalDuplicateCount > 0 && (
                 <button className="pagebox-btn pagebox-btn--primary" onClick={handleCleanAllDuplicates}>
-                  {t.statistics.cleanAllDuplicatesBtn}
+                  {!isPro && duplicatesGroup.length > FREE_DUPLICATE_GROUP_QUOTA
+                    ? t.statistics.cleanDuplicatesQuotaBtn(FREE_DUPLICATE_GROUP_QUOTA)
+                    : t.statistics.cleanAllDuplicatesBtn}
                 </button>
               )}
             </div>
@@ -876,12 +943,12 @@ export function StatisticsDashboard({
       {/* 专区 3：活跃度与常读榜 */}
       {activeSubTab === "activity" && (
         <div className="pagebox-stats__pane">
-          {/* 常读书签 Top 10 */}
+          {/* 常读书签榜（Pro 展示 Top 20，免费展示 Top 5 + 模糊引导） */}
           <div className="pagebox-stats__card">
             <div className="pagebox-stats__card-header pagebox-stats__card-header--split">
               <div className="pagebox-stats__card-title">
                 <FireIcon size={18} className="pagebox-stats__icon-fire" />
-                <span>{t.statistics.popularTitle}</span>
+                <span>{isPro ? t.statistics.popularTop20Title : t.statistics.popularTitle}</span>
                 <span className="pagebox-stats__card-tip">{t.statistics.popularTip}</span>
               </div>
               <div className="pagebox-stats__header-actions">
@@ -914,46 +981,71 @@ export function StatisticsDashboard({
               </div>
             ) : (
               <div className="pagebox-stats__list">
-                {topVisitedTabs.map((tab, idx) => (
-                  <div key={tab.id} className="pagebox-stats__list-item is-hot">
-                    <div className="pagebox-stats__rank-badge">
-                      {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`}
-                    </div>
-                    <TabFavicon favIconUrl={tab.favIconUrl} url={tab.url} title={tab.title} />
-                    <div className="pagebox-stats__item-main">
-                      <div className="pagebox-stats__item-title" title={tab.title}>
-                        {tab.title}
-                      </div>
-                      <div className="pagebox-stats__item-meta">
-                        <span className="pagebox-stats__item-url">{tab.url}</span>
-                        <span className="pagebox-stats__meta-split">•</span>
-                        <span className="pagebox-stats__time-ago">
-                          {t.statistics.lastVisitedText(formatTimeAgo(tab.effectiveLastVisitedAt))}
-                        </span>
-                      </div>
-                    </div>
+                {topVisitedTabs.map((tab, idx) => {
+                  const isBlurredItem = !isPro && idx >= 5;
+                  return (
                     <div
-                      className="pagebox-stats__hot-count"
-                      title={enableHistoryAux ? t.statistics.visitBreakdownText(tab.pluginVisitCount, tab.historyVisitCount) : undefined}
+                      key={tab.id}
+                      className={`pagebox-stats__list-item is-hot ${isBlurredItem ? "is-blurred" : ""}`}
                     >
-                      <FireIcon size={14} />
-                      <span>{t.statistics.combinedVisitCountText(tab.combinedVisitCount)}</span>
-                      {enableHistoryAux && (tab.historyVisitCount > 0 || tab.pluginVisitCount > 0) && (
-                        <span className="pagebox-stats__breakdown-tag">
-                          {t.statistics.visitBreakdownText(tab.pluginVisitCount, tab.historyVisitCount)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="pagebox-stats__item-actions">
-                      <button
-                        className="pagebox-btn pagebox-btn--primary pagebox-btn--sm"
-                        onClick={() => handleOpenTab(tab)}
+                      <div className="pagebox-stats__rank-badge">
+                        {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`}
+                      </div>
+                      <TabFavicon favIconUrl={tab.favIconUrl} url={tab.url} title={tab.title} />
+                      <div className="pagebox-stats__item-main">
+                        <div className="pagebox-stats__item-title" title={tab.title}>
+                          {tab.title}
+                        </div>
+                        <div className="pagebox-stats__item-meta">
+                          <span className="pagebox-stats__item-url">{tab.url}</span>
+                          <span className="pagebox-stats__meta-split">•</span>
+                          <span className="pagebox-stats__time-ago">
+                            {t.statistics.lastVisitedText(formatTimeAgo(tab.effectiveLastVisitedAt))}
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        className="pagebox-stats__hot-count"
+                        title={enableHistoryAux ? t.statistics.visitBreakdownText(tab.pluginVisitCount, tab.historyVisitCount) : undefined}
                       >
-                        {t.statistics.openBtn}
-                      </button>
+                        <FireIcon size={14} />
+                        <span>{t.statistics.combinedVisitCountText(tab.combinedVisitCount)}</span>
+                        {enableHistoryAux && (tab.historyVisitCount > 0 || tab.pluginVisitCount > 0) && (
+                          <span className="pagebox-stats__breakdown-tag">
+                            {t.statistics.visitBreakdownText(tab.pluginVisitCount, tab.historyVisitCount)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="pagebox-stats__item-actions">
+                        <button
+                          className="pagebox-btn pagebox-btn--primary pagebox-btn--sm"
+                          onClick={() => handleOpenTab(tab)}
+                          disabled={isBlurredItem}
+                        >
+                          {t.statistics.openBtn}
+                        </button>
+                      </div>
                     </div>
+                  );
+                })}
+
+                {/* 免费版超过 5 条时，展示 Pro 升级引导横幅 */}
+                {!isPro && topVisitedTabs.length > 5 && (
+                  <div className="pagebox-stats__pro-banner">
+                    <div className="pagebox-stats__pro-banner-content">
+                      <CrownIcon size={18} className="pagebox-stats__pro-crown" />
+                      <span>{t.statistics.popularProUnlockBanner}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="pagebox-btn pagebox-btn--buy pagebox-btn--sm"
+                      onClick={onOpenLicense}
+                    >
+                      <CrownIcon size={13} />
+                      <span>{t.statistics.unlockProBtn}</span>
+                    </button>
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
