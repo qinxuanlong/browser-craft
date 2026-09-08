@@ -30,8 +30,8 @@ textarea {
 }
 
 .pagebox-app--popup {
-  width: 380px;
-  height: 520px;
+  width: 400px;
+  height: 540px;
 }
 
 .pagebox-app--sidepanel {
@@ -40,7 +40,8 @@ textarea {
 }
 
 .pagebox-app--sidepanel .pagebox-header {
-  padding: 6px 12px;
+  height: 44px;
+  padding: 0 12px;
 }
 
 .pagebox-header {
@@ -48,10 +49,12 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 12px;
-  background: #fff;
-  border-bottom: 1px solid #eef0f3;
+  height: 44px;
+  padding: 0 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #eef2f6;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .pagebox-header__brand {
@@ -65,8 +68,10 @@ textarea {
   margin: 0;
   font-size: 14px;
   font-weight: 700;
-  color: #1d2939;
+  color: #1e293b;
   letter-spacing: -0.2px;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .pagebox-header__actions {
@@ -79,8 +84,9 @@ textarea {
 .pagebox-header__divider {
   width: 1px;
   height: 14px;
-  background: #e4e7ec;
-  margin: 0 2px;
+  background: #e2e8f0;
+  margin: 0 3px;
+  flex-shrink: 0;
 }
 
 .pagebox-header-btn {
@@ -100,8 +106,9 @@ textarea {
 }
 
 .pagebox-header-btn:hover {
-  background: #f2f4f7;
-  color: #101828;
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #e2e8f0;
 }
 
 .pagebox-header-btn:active {
@@ -110,23 +117,28 @@ textarea {
 }
 
 .pagebox-header-btn--primary {
-  background: #4f46e5;
-  color: #fff;
+  background: #eef2ff;
+  color: #4f46e5;
+  border-color: #e0e7ff;
 }
 
 .pagebox-header-btn--primary:hover {
-  background: #4338ca;
-  color: #fff;
+  background: #4f46e5;
+  color: #ffffff;
+  border-color: #4338ca;
+  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.25);
 }
 
 .pagebox-header-btn--highlight {
   color: #4f46e5;
-  background: #eef4ff;
+  background: #f5f3ff;
+  border-color: #ede9fe;
 }
 
 .pagebox-header-btn--highlight:hover {
-  background: #e0eaff;
-  color: #3538cd;
+  background: #4f46e5;
+  color: #ffffff;
+  border-color: #4338ca;
 }
 
 .pagebox-btn-icon {
@@ -686,6 +698,110 @@ textarea {
 
 .pagebox-modal__actions .pagebox-btn--primary:active {
   transform: translateY(0);
+}
+
+/* 二次确认弹窗专用样式 */
+.pagebox-confirm-modal {
+  width: min(480px, calc(100vw - 32px));
+}
+
+.pagebox-icon--danger {
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.pagebox-confirm-modal__desc {
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.55;
+  margin: 0 0 12px;
+}
+
+.pagebox-confirm-modal__warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #b91c1c;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.pagebox-confirm-modal__warning svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.pagebox-confirm-modal__preview {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.pagebox-confirm-modal__preview-header {
+  padding: 8px 12px;
+  background: #f1f5f9;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.pagebox-confirm-modal__preview-list {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.pagebox-confirm-modal__preview-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.pagebox-confirm-modal__preview-item:last-child {
+  border-bottom: none;
+}
+
+.pagebox-confirm-modal__preview-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.pagebox-confirm-modal__preview-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pagebox-confirm-modal__preview-sub {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pagebox-confirm-modal__preview-more {
+  text-align: center;
+  font-size: 11px;
+  color: #94a3b8;
+  padding: 6px 12px;
+  background: #f8fafc;
 }
 
 /* 按钮高亮样式（打开管理大页） */
@@ -1737,47 +1853,53 @@ textarea {
 .pagebox-header__brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex: 1;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 /* Pro 会员徽章 */
 .pagebox-pro-badge {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 3px;
-  padding: 1px 6px;
+  height: 20px;
+  padding: 0 7px;
   border-radius: 9999px;
-  font-size: 10.5px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
-  border: none;
-  line-height: 1.4;
-  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  line-height: 1;
+  transition: all 0.15s ease;
+  user-select: none;
+  box-sizing: border-box;
 }
 
 .pagebox-pro-badge--active {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   color: #ffffff;
-  box-shadow: 0 1px 4px rgba(217, 119, 6, 0.35);
+  box-shadow: 0 1px 3px rgba(217, 119, 6, 0.3);
 }
 
 .pagebox-pro-badge--active:hover {
   filter: brightness(1.08);
-  transform: translateY(-1px);
+  transform: translateY(-0.5px);
 }
 
 .pagebox-pro-badge--upgrade {
   background: #fffbeb;
   color: #b45309;
-  border: 1px solid #fde68a;
+  border-color: #fde68a;
 }
 
 .pagebox-pro-badge--upgrade:hover {
   background: #fef3c7;
-  border-color: #fcd34d;
+  border-color: #f59e0b;
   color: #92400e;
-  transform: translateY(-1px);
+  transform: translateY(-0.5px);
 }
 
 /* License 弹窗 */
@@ -2780,6 +2902,77 @@ textarea {
   padding: 10px;
 }
 
+/* 历史记录辅助统计工具栏与标签 */
+.pagebox-stats__card-header--split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pagebox-stats__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pagebox-stats__toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+}
+
+.pagebox-stats__toggle-label input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: #4f46e5;
+  width: 14px;
+  height: 14px;
+}
+
+.pagebox-stats__breakdown-tag {
+  font-size: 10px;
+  font-weight: 500;
+  color: #c2410c;
+  background: #ffedd5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+.pagebox-stats__awakened-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  color: #065f46;
+  font-size: 12px;
+  margin-bottom: 14px;
+  font-weight: 500;
+}
+
+.pagebox-spin {
+  animation: pagebox-spin 0.9s linear infinite;
+}
+
+@keyframes pagebox-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* 辅助徽章与按钮类 */
 .pagebox-badge {
   display: inline-flex;
@@ -2856,6 +3049,1352 @@ textarea {
   animation: pageboxSpin 1s linear infinite;
 }
 
+.pagebox-btn--lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f8f9fa;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
 
+.pagebox-btn--lang:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
 
+/* ==========================================================================
+   系统设置与数据管理视图 (SettingsView)
+   ========================================================================== */
 
+.pagebox-settings-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px 48px;
+  background: #f8fafc;
+}
+
+.pagebox-settings-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.pagebox-settings-header__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dbeafe;
+}
+
+.pagebox-settings-header__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.pagebox-settings-header__subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.pagebox-settings-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 860px;
+}
+
+.pagebox-settings-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.pagebox-settings-card__header {
+  padding: 14px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fafafa;
+}
+
+.pagebox-settings-card__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagebox-settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.pagebox-settings-item:last-child {
+  border-bottom: none;
+}
+
+.pagebox-settings-item__info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.pagebox-settings-item__label-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pagebox-settings-item__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.pagebox-settings-item__desc {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.pagebox-settings-item__action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.pagebox-lang-switch-group {
+  display: flex;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.pagebox-lang-btn {
+  padding: 5px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pagebox-lang-btn.is-active {
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.pagebox-settings-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagebox-badge--success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.pagebox-badge--pro {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.pagebox-btn--upgrade-inline {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+}
+
+.pagebox-btn--upgrade-inline:hover {
+  opacity: 0.92;
+}
+
+/* ==========================================================================
+   全系统暗色模式 (Dark Theme System)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. 全局基础、主背景与滚动条
+   -------------------------------------------------------------------------- */
+[data-theme="dark"],
+.pagebox-theme-dark {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] body,
+.pagebox-theme-dark body,
+body[data-theme="dark"],
+body.pagebox-theme-dark {
+  background: #0b0f19;
+  color: #f1f5f9;
+}
+
+/* 滚动条暗色模式适配 */
+[data-theme="dark"] ::-webkit-scrollbar,
+.pagebox-theme-dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track,
+.pagebox-theme-dark ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb,
+.pagebox-theme-dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover,
+.pagebox-theme-dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* 主题切换按钮图标与文字对齐 */
+.pagebox-theme-switch-group .pagebox-lang-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* --------------------------------------------------------------------------
+   2. 快捷弹窗与侧边栏容器 (Popup & SidePanel)
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] .pagebox-app,
+.pagebox-theme-dark .pagebox-app {
+  background: #0f172a;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .pagebox-header,
+.pagebox-theme-dark .pagebox-header {
+  background: #111827;
+  border-bottom-color: #1f2937;
+}
+
+[data-theme="dark"] .pagebox-header__brand h1,
+.pagebox-theme-dark .pagebox-header__brand h1 {
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .pagebox-header-btn,
+.pagebox-theme-dark .pagebox-header-btn {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .pagebox-header-btn:hover,
+.pagebox-theme-dark .pagebox-header-btn:hover {
+  background: #1f2937;
+  color: #f3f4f6;
+  border-color: #374151;
+}
+
+[data-theme="dark"] .pagebox-header-btn.is-active,
+.pagebox-theme-dark .pagebox-header-btn.is-active {
+  background: #1f2937;
+  color: #818cf8;
+  border-color: #4f46e5;
+}
+
+[data-theme="dark"] .pagebox-header-btn--primary,
+.pagebox-theme-dark .pagebox-header-btn--primary {
+  background: rgba(99, 102, 241, 0.16);
+  color: #818cf8;
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+[data-theme="dark"] .pagebox-header-btn--primary:hover,
+.pagebox-theme-dark .pagebox-header-btn--primary:hover {
+  background: #4f46e5;
+  color: #ffffff;
+  border-color: #4338ca;
+}
+
+[data-theme="dark"] .pagebox-header-btn--highlight,
+.pagebox-theme-dark .pagebox-header-btn--highlight {
+  background: rgba(99, 102, 241, 0.12);
+  color: #a5b4fc;
+  border-color: rgba(99, 102, 241, 0.25);
+}
+
+[data-theme="dark"] .pagebox-header-btn--highlight:hover,
+.pagebox-theme-dark .pagebox-header-btn--highlight:hover {
+  background: #4f46e5;
+  color: #ffffff;
+  border-color: #4338ca;
+}
+
+[data-theme="dark"] .pagebox-pro-badge--upgrade,
+.pagebox-theme-dark .pagebox-pro-badge--upgrade {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+[data-theme="dark"] .pagebox-header__divider,
+.pagebox-theme-dark .pagebox-header__divider {
+  background: #1f2937;
+}
+
+[data-theme="dark"] .pagebox-search,
+.pagebox-theme-dark .pagebox-search {
+  background: #111827;
+  border-bottom-color: #1f2937;
+}
+
+[data-theme="dark"] .pagebox-search__input,
+.pagebox-theme-dark .pagebox-search__input {
+  background: #1f2937;
+  border-color: #374151;
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .pagebox-search__input:focus,
+.pagebox-theme-dark .pagebox-search__input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="dark"] .pagebox-search__input::placeholder,
+.pagebox-theme-dark .pagebox-search__input::placeholder {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .pagebox-search__icon,
+.pagebox-theme-dark .pagebox-search__icon {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .pagebox-search__clear,
+.pagebox-theme-dark .pagebox-search__clear {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .pagebox-search__shortcut,
+.pagebox-theme-dark .pagebox-search__shortcut {
+  background: #111827;
+  border-color: #374151;
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .pagebox-quick-tools,
+.pagebox-theme-dark .pagebox-quick-tools {
+  background: #111827;
+  border-bottom-color: #1f2937;
+}
+
+[data-theme="dark"] .pagebox-quick-btn,
+.pagebox-theme-dark .pagebox-quick-btn {
+  background: #1f2937;
+  border-color: #374151;
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .pagebox-quick-btn:hover,
+.pagebox-theme-dark .pagebox-quick-btn:hover {
+  background: #374151;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .pagebox-filter-chips,
+.pagebox-theme-dark .pagebox-filter-chips {
+  background: #111827;
+  border-bottom-color: #1f2937;
+}
+
+[data-theme="dark"] .pagebox-filter-chip,
+.pagebox-theme-dark .pagebox-filter-chip {
+  background: #1f2937;
+  border-color: #374151;
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .pagebox-filter-chip:hover,
+.pagebox-theme-dark .pagebox-filter-chip:hover {
+  background: #374151;
+  color: #f3f4f6;
+}
+
+[data-theme="dark"] .pagebox-filter-chip.is-active,
+.pagebox-theme-dark .pagebox-filter-chip.is-active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: #6366f1;
+  color: #818cf8;
+}
+
+[data-theme="dark"] .pagebox-main,
+.pagebox-theme-dark .pagebox-main {
+  background: #0b0f19;
+}
+
+[data-theme="dark"] .pagebox-item,
+.pagebox-theme-dark .pagebox-item {
+  background: #111827;
+  border-color: #1f2937;
+}
+
+[data-theme="dark"] .pagebox-item:hover,
+.pagebox-theme-dark .pagebox-item:hover {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+[data-theme="dark"] .pagebox-item__title,
+.pagebox-theme-dark .pagebox-item__title {
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .pagebox-item__url,
+.pagebox-theme-dark .pagebox-item__url {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .pagebox-item__actions button,
+.pagebox-theme-dark .pagebox-item__actions button {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .pagebox-item__actions button:hover,
+.pagebox-theme-dark .pagebox-item__actions button:hover {
+  background: #374151;
+  color: #f9fafb;
+}
+
+[data-theme="dark"] .pagebox-empty,
+.pagebox-theme-dark .pagebox-empty {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .pagebox-footer,
+.pagebox-theme-dark .pagebox-footer {
+  background: #111827;
+  border-top-color: #1f2937;
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .pagebox-status,
+.pagebox-theme-dark .pagebox-status {
+  background: #111827;
+  border-top-color: #1f2937;
+  color: #9ca3af;
+}
+
+/* --------------------------------------------------------------------------
+   3. Windows 11 资源管理器风格目录展开树 (FolderTree)
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] .pagebox-tree-row,
+.pagebox-theme-dark .pagebox-tree-row,
+[data-theme="dark"] .pagebox-tree-item,
+.pagebox-theme-dark .pagebox-tree-item {
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .pagebox-tree-row:hover,
+.pagebox-theme-dark .pagebox-tree-row:hover,
+[data-theme="dark"] .pagebox-tree-item:hover,
+.pagebox-theme-dark .pagebox-tree-item:hover {
+  background: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-tree-row.is-selected,
+.pagebox-theme-dark .pagebox-tree-row.is-selected {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .pagebox-tree-chevron,
+.pagebox-theme-dark .pagebox-tree-chevron {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .pagebox-tree-chevron:hover,
+.pagebox-theme-dark .pagebox-tree-chevron:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .pagebox-tree-count,
+.pagebox-theme-dark .pagebox-tree-count {
+  color: #64748b;
+}
+
+[data-theme="dark"] .pagebox-tree-hover-actions button,
+.pagebox-theme-dark .pagebox-tree-hover-actions button {
+  color: #9ca3af;
+}
+
+[data-theme="dark"] .pagebox-tree-hover-actions button:hover,
+.pagebox-theme-dark .pagebox-tree-hover-actions button:hover {
+  background: #334155;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-tree-rename-input,
+.pagebox-theme-dark .pagebox-tree-rename-input {
+  background: #0f172a;
+  color: #f8fafc;
+  border-color: #3b82f6;
+}
+
+/* --------------------------------------------------------------------------
+   4. 全屏管理大页 (ManagerApp)
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] .pagebox-manager,
+.pagebox-theme-dark .pagebox-manager {
+  background: #0b0f19;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .pagebox-manager__header,
+.pagebox-theme-dark .pagebox-manager__header {
+  background: #0f172a;
+  border-bottom-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-manager__title,
+.pagebox-theme-dark .pagebox-manager__title {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-manager__search-box input,
+.pagebox-theme-dark .pagebox-manager__search-box input {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-manager__search-box input:focus,
+.pagebox-theme-dark .pagebox-manager__search-box input:focus {
+  background: #0f172a;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
+[data-theme="dark"] .pagebox-manager__sidebar,
+.pagebox-theme-dark .pagebox-manager__sidebar {
+  background: #0f172a;
+  border-right-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-sidebar__section-header,
+.pagebox-theme-dark .pagebox-sidebar__section-header {
+  color: #64748b;
+}
+
+[data-theme="dark"] .pagebox-sidebar__nav-item,
+.pagebox-theme-dark .pagebox-sidebar__nav-item {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-sidebar__nav-item:hover,
+.pagebox-theme-dark .pagebox-sidebar__nav-item:hover {
+  background: #1e293b;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-sidebar__nav-item.is-active,
+.pagebox-theme-dark .pagebox-sidebar__nav-item.is-active {
+  background: rgba(59, 130, 246, 0.16);
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .pagebox-sidebar__nav-badge,
+.pagebox-theme-dark .pagebox-sidebar__nav-badge {
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-sidebar__add-btn,
+.pagebox-theme-dark .pagebox-sidebar__add-btn {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-sidebar__add-btn:hover,
+.pagebox-theme-dark .pagebox-sidebar__add-btn:hover {
+  background: #1e293b;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-manager__content,
+.pagebox-theme-dark .pagebox-manager__content {
+  background: #0b0f19;
+}
+
+[data-theme="dark"] .pagebox-content__breadcrumb-bar,
+.pagebox-theme-dark .pagebox-content__breadcrumb-bar {
+  background: #0f172a;
+  border-bottom-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-breadcrumbs,
+.pagebox-theme-dark .pagebox-breadcrumbs {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-breadcrumbs__root,
+.pagebox-theme-dark .pagebox-breadcrumbs__root {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-batch-bar,
+.pagebox-theme-dark .pagebox-batch-bar {
+  background: #131d31;
+  border-bottom-color: #1e293b;
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-batch-bar__count,
+.pagebox-theme-dark .pagebox-batch-bar__count {
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .pagebox-batch-bar__move select,
+.pagebox-theme-dark .pagebox-batch-bar__move select {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-list-section__title,
+.pagebox-theme-dark .pagebox-list-section__title {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-tab-row,
+.pagebox-theme-dark .pagebox-tab-row {
+  border-bottom-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-tab-row:hover,
+.pagebox-theme-dark .pagebox-tab-row:hover {
+  background: #131d31;
+}
+
+[data-theme="dark"] .pagebox-tab-row.is-selected,
+.pagebox-theme-dark .pagebox-tab-row.is-selected {
+  background: rgba(59, 130, 246, 0.16);
+}
+
+[data-theme="dark"] .pagebox-tab-row__title,
+.pagebox-theme-dark .pagebox-tab-row__title {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-tab-row__url,
+.pagebox-theme-dark .pagebox-tab-row__url {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .folder-badge,
+.pagebox-theme-dark .folder-badge {
+  background: #2d2605;
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .folder-badge--none,
+.pagebox-theme-dark .folder-badge--none {
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-action-btn,
+.pagebox-theme-dark .pagebox-action-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-action-btn:hover,
+.pagebox-theme-dark .pagebox-action-btn:hover {
+  background: #334155;
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-window-card,
+.pagebox-theme-dark .pagebox-window-card {
+  background: #131d31;
+  border-color: #1e293b;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .pagebox-window-card__count,
+.pagebox-theme-dark .pagebox-window-card__count {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-window-card__tab-preview,
+.pagebox-theme-dark .pagebox-window-card__tab-preview {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-manager__status-toast,
+.pagebox-theme-dark .pagebox-manager__status-toast {
+  background: #1e293b;
+  color: #f8fafc;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  border: 1px solid #334155;
+}
+
+[data-theme="dark"] .pagebox-folder-select-list,
+.pagebox-theme-dark .pagebox-folder-select-list {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-folder-select-item,
+.pagebox-theme-dark .pagebox-folder-select-item {
+  background: #131d31;
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-folder-select-item:hover,
+.pagebox-theme-dark .pagebox-folder-select-item:hover {
+  background: #1e293b;
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+/* --------------------------------------------------------------------------
+   5. 通用模态框与二次确认弹窗 (Modals)
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] .pagebox-modal,
+.pagebox-theme-dark .pagebox-modal {
+  background: #1e293b;
+  box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.5),
+              0 0 0 1px rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .pagebox-modal-title,
+.pagebox-theme-dark .pagebox-modal-title,
+[data-theme="dark"] .pagebox-modal__header h2,
+.pagebox-theme-dark .pagebox-modal__header h2,
+[data-theme="dark"] .pagebox-modal__title,
+.pagebox-theme-dark .pagebox-modal__title {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-modal__tip-badge,
+.pagebox-theme-dark .pagebox-modal__tip-badge {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-modal input[type="text"],
+.pagebox-theme-dark .pagebox-modal input[type="text"],
+[data-theme="dark"] .pagebox-modal input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]),
+.pagebox-theme-dark .pagebox-modal input:not([type="button"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"] .pagebox-modal textarea,
+.pagebox-theme-dark .pagebox-modal textarea {
+  background: #0f172a;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-modal input:hover,
+.pagebox-theme-dark .pagebox-modal input:hover,
+[data-theme="dark"] .pagebox-modal textarea:hover,
+.pagebox-theme-dark .pagebox-modal textarea:hover {
+  border-color: #475569;
+}
+
+[data-theme="dark"] .pagebox-modal input:focus,
+.pagebox-theme-dark .pagebox-modal input:focus,
+[data-theme="dark"] .pagebox-modal textarea:focus,
+.pagebox-theme-dark .pagebox-modal textarea:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="dark"] .pagebox-modal input::placeholder,
+.pagebox-theme-dark .pagebox-modal input::placeholder,
+[data-theme="dark"] .pagebox-modal textarea::placeholder,
+.pagebox-theme-dark .pagebox-modal textarea::placeholder {
+  color: #64748b;
+}
+
+[data-theme="dark"] .pagebox-confirm-modal__desc,
+.pagebox-theme-dark .pagebox-confirm-modal__desc {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-confirm-modal__warning,
+.pagebox-theme-dark .pagebox-confirm-modal__warning {
+  background: #450a0a;
+  border-color: #7f1d1d;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .pagebox-confirm-modal__preview,
+.pagebox-theme-dark .pagebox-confirm-modal__preview {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .pagebox-confirm-modal__preview-header,
+.pagebox-theme-dark .pagebox-confirm-modal__preview-header {
+  background: #18233c;
+  color: #cbd5e1;
+  border-bottom-color: #334155;
+}
+
+[data-theme="dark"] .pagebox-confirm-modal__preview-item,
+.pagebox-theme-dark .pagebox-confirm-modal__preview-item {
+  border-bottom-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-confirm-modal__preview-title,
+.pagebox-theme-dark .pagebox-confirm-modal__preview-title {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-confirm-modal__preview-sub,
+.pagebox-theme-dark .pagebox-confirm-modal__preview-sub {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-confirm-modal__preview-more,
+.pagebox-theme-dark .pagebox-confirm-modal__preview-more {
+  background: #0f172a;
+  color: #94a3b8;
+}
+
+/* --------------------------------------------------------------------------
+   6. 同步与 License 弹窗 (Sync & License)
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] .pagebox-sync-modal,
+.pagebox-theme-dark .pagebox-sync-modal {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .pagebox-sync-modal__header h2,
+.pagebox-theme-dark .pagebox-sync-modal__header h2 {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-sync-modal__subtitle,
+.pagebox-theme-dark .pagebox-sync-modal__subtitle {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-sync-card,
+.pagebox-theme-dark .pagebox-sync-card {
+  background: #131d31;
+  border-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-sync-card:hover,
+.pagebox-theme-dark .pagebox-sync-card:hover {
+  border-color: #3b82f6;
+  background: #18233c;
+}
+
+[data-theme="dark"] .pagebox-sync-card__title,
+.pagebox-theme-dark .pagebox-sync-card__title {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-sync-card__desc,
+.pagebox-theme-dark .pagebox-sync-card__desc,
+[data-theme="dark"] .pagebox-sync-checkbox,
+.pagebox-theme-dark .pagebox-sync-checkbox {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-sync-card__direction--pull,
+.pagebox-theme-dark .pagebox-sync-card__direction--pull {
+  background: #0c4a6e;
+  color: #38bdf8;
+}
+
+[data-theme="dark"] .pagebox-sync-card__direction--push,
+.pagebox-theme-dark .pagebox-sync-card__direction--push {
+  background: #451a03;
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .pagebox-license-modal,
+.pagebox-theme-dark .pagebox-license-modal {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .pagebox-license-header-title h2,
+.pagebox-theme-dark .pagebox-license-header-title h2 {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-license-lead,
+.pagebox-theme-dark .pagebox-license-lead {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-license-perks,
+.pagebox-theme-dark .pagebox-license-perks {
+  background: #131d31;
+  border-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-license-perk-item,
+.pagebox-theme-dark .pagebox-license-perk-item {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-license-perk-item p,
+.pagebox-theme-dark .pagebox-license-perk-item p {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-divider,
+.pagebox-theme-dark .pagebox-divider {
+  background: #334155;
+}
+
+[data-theme="dark"] .pagebox-license-form-label,
+.pagebox-theme-dark .pagebox-license-form-label {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-modal input.pagebox-license-input,
+.pagebox-theme-dark .pagebox-modal input.pagebox-license-input {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .pagebox-license-card,
+.pagebox-theme-dark .pagebox-license-card {
+  background: #131d31;
+  border-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-license-info-row,
+.pagebox-theme-dark .pagebox-license-info-row {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-license-info-label,
+.pagebox-theme-dark .pagebox-license-info-label {
+  color: #64748b;
+}
+
+/* --------------------------------------------------------------------------
+   7. 书签全维统计看板与健康治理系统 (Statistics Dashboard)
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] .pagebox-stats__score-card,
+.pagebox-theme-dark .pagebox-stats__score-card,
+[data-theme="dark"] .pagebox-kpi-item,
+.pagebox-theme-dark .pagebox-kpi-item,
+[data-theme="dark"] .pagebox-stats__card,
+.pagebox-theme-dark .pagebox-stats__card {
+  background: #131d31;
+  border-color: #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="dark"] .pagebox-stats__score-title,
+.pagebox-theme-dark .pagebox-stats__score-title,
+[data-theme="dark"] .pagebox-kpi-num,
+.pagebox-theme-dark .pagebox-kpi-num,
+[data-theme="dark"] .pagebox-stats__card-title,
+.pagebox-theme-dark .pagebox-stats__card-title,
+[data-theme="dark"] .pagebox-stats__metric-big,
+.pagebox-theme-dark .pagebox-stats__metric-big,
+[data-theme="dark"] .pagebox-stats__bar-name,
+.pagebox-theme-dark .pagebox-stats__bar-name,
+[data-theme="dark"] .pagebox-stats__fbar-name,
+.pagebox-theme-dark .pagebox-stats__fbar-name,
+[data-theme="dark"] .pagebox-stats__item-title,
+.pagebox-theme-dark .pagebox-stats__item-title {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-stats__score-desc,
+.pagebox-theme-dark .pagebox-stats__score-desc,
+[data-theme="dark"] .pagebox-kpi-label,
+.pagebox-theme-dark .pagebox-kpi-label,
+[data-theme="dark"] .pagebox-stats__card-tip,
+.pagebox-theme-dark .pagebox-stats__card-tip,
+[data-theme="dark"] .pagebox-stats__metric-sub,
+.pagebox-theme-dark .pagebox-stats__metric-sub,
+[data-theme="dark"] .pagebox-stats__item-url,
+.pagebox-theme-dark .pagebox-stats__item-url,
+[data-theme="dark"] .pagebox-stats__fbar-count,
+.pagebox-theme-dark .pagebox-stats__fbar-count {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-stats__tabs-bar,
+.pagebox-theme-dark .pagebox-stats__tabs-bar {
+  border-bottom-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-stats__tab-btn,
+.pagebox-theme-dark .pagebox-stats__tab-btn {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-stats__tab-btn:hover,
+.pagebox-theme-dark .pagebox-stats__tab-btn:hover {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-stats__tab-btn.is-active,
+.pagebox-theme-dark .pagebox-stats__tab-btn.is-active {
+  color: #818cf8;
+  border-bottom-color: #818cf8;
+}
+
+[data-theme="dark"] .pagebox-stats__counter-tag,
+.pagebox-theme-dark .pagebox-stats__counter-tag {
+  background: #1e293b;
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-stats__progress-wrap,
+.pagebox-theme-dark .pagebox-stats__progress-wrap {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-stats__progress-info,
+.pagebox-theme-dark .pagebox-stats__progress-info {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-stats__progress-bar,
+.pagebox-theme-dark .pagebox-stats__progress-bar {
+  background: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-stats__empty-msg,
+.pagebox-theme-dark .pagebox-stats__empty-msg {
+  background: #0f172a;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-stats__empty-msg.is-success,
+.pagebox-theme-dark .pagebox-stats__empty-msg.is-success {
+  background: #064e3b;
+  border-color: #047857;
+  color: #a7f3d0;
+}
+
+[data-theme="dark"] .pagebox-stats__list-item,
+.pagebox-theme-dark .pagebox-stats__list-item {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-stats__list-item:hover,
+.pagebox-theme-dark .pagebox-stats__list-item:hover {
+  background: #18233c;
+}
+
+[data-theme="dark"] .pagebox-stats__list-item.is-hot,
+.pagebox-theme-dark .pagebox-stats__list-item.is-hot {
+  background: #131d31;
+  border-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-stats__dup-card,
+.pagebox-theme-dark .pagebox-stats__dup-card {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-stats__dup-header,
+.pagebox-theme-dark .pagebox-stats__dup-header {
+  background: #18233c;
+  border-bottom-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-stats__dup-url,
+.pagebox-theme-dark .pagebox-stats__dup-url {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-stats__dup-idx,
+.pagebox-theme-dark .pagebox-stats__dup-idx {
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-stats__dup-title,
+.pagebox-theme-dark .pagebox-stats__dup-title {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-stats__dup-folder,
+.pagebox-theme-dark .pagebox-stats__dup-folder {
+  color: #64748b;
+}
+
+[data-theme="dark"] .pagebox-stats__folder-chip,
+.pagebox-theme-dark .pagebox-stats__folder-chip {
+  background: #0f172a;
+  border-color: #1e293b;
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-stats__bar-row:hover,
+.pagebox-theme-dark .pagebox-stats__bar-row:hover,
+[data-theme="dark"] .pagebox-stats__folder-bar-item:hover,
+.pagebox-theme-dark .pagebox-stats__folder-bar-item:hover {
+  background: #18233c;
+}
+
+[data-theme="dark"] .pagebox-stats__bar-track,
+.pagebox-theme-dark .pagebox-stats__bar-track,
+[data-theme="dark"] .pagebox-stats__fbar-track,
+.pagebox-theme-dark .pagebox-stats__fbar-track {
+  background: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-stats__bar-count,
+.pagebox-theme-dark .pagebox-stats__bar-count {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-stats__histogram,
+.pagebox-theme-dark .pagebox-stats__histogram {
+  border-bottom-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-stats__histo-label,
+.pagebox-theme-dark .pagebox-stats__histo-label {
+  color: #64748b;
+}
+
+[data-theme="dark"] .pagebox-stats__rank-badge,
+.pagebox-theme-dark .pagebox-stats__rank-badge {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-stats__hot-count,
+.pagebox-theme-dark .pagebox-stats__hot-count {
+  background: #431407;
+  border-color: #7c2d12;
+  color: #fb923c;
+}
+
+[data-theme="dark"] .pagebox-stats__toggle-label,
+.pagebox-theme-dark .pagebox-stats__toggle-label {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-stats__breakdown-tag,
+.pagebox-theme-dark .pagebox-stats__breakdown-tag {
+  background: #431407;
+  color: #fb923c;
+}
+
+[data-theme="dark"] .pagebox-stats__awakened-banner,
+.pagebox-theme-dark .pagebox-stats__awakened-banner {
+  background: #064e3b;
+  border-color: #047857;
+  color: #a7f3d0;
+}
+
+/* --------------------------------------------------------------------------
+   8. 系统设置与数据管理视图 (SettingsView)
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] .pagebox-settings-view,
+.pagebox-theme-dark .pagebox-settings-view {
+  background: #0b0f19;
+}
+
+[data-theme="dark"] .pagebox-settings-header__title,
+.pagebox-theme-dark .pagebox-settings-header__title {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-settings-header__subtitle,
+.pagebox-theme-dark .pagebox-settings-header__subtitle {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-settings-header__icon,
+.pagebox-theme-dark .pagebox-settings-header__icon {
+  background: #1e293b;
+  border-color: #334155;
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .pagebox-settings-card,
+.pagebox-theme-dark .pagebox-settings-card {
+  background: #131d31;
+  border-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-settings-card__header,
+.pagebox-theme-dark .pagebox-settings-card__header {
+  background: #18233c;
+  border-bottom-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-settings-card__title,
+.pagebox-theme-dark .pagebox-settings-card__title {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-settings-item,
+.pagebox-theme-dark .pagebox-settings-item {
+  border-bottom-color: #1e293b;
+}
+
+[data-theme="dark"] .pagebox-settings-item__label,
+.pagebox-theme-dark .pagebox-settings-item__label {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-settings-item__desc,
+.pagebox-theme-dark .pagebox-settings-item__desc {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-lang-switch-group,
+.pagebox-theme-dark .pagebox-lang-switch-group {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+}
+
+[data-theme="dark"] .pagebox-lang-btn,
+.pagebox-theme-dark .pagebox-lang-btn {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-lang-btn:hover,
+.pagebox-theme-dark .pagebox-lang-btn:hover {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-lang-btn.is-active,
+.pagebox-theme-dark .pagebox-lang-btn.is-active {
+  background: #1e293b;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* --------------------------------------------------------------------------
+   9. 通用按钮与徽章
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] .pagebox-btn--default,
+.pagebox-theme-dark .pagebox-btn--default,
+[data-theme="dark"] .pagebox-btn--secondary,
+.pagebox-theme-dark .pagebox-btn--secondary {
+  background: #1e293b;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-btn--default:hover,
+.pagebox-theme-dark .pagebox-btn--default:hover,
+[data-theme="dark"] .pagebox-btn--secondary:hover,
+.pagebox-theme-dark .pagebox-btn--secondary:hover {
+  background: #334155;
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-btn--ghost,
+.pagebox-theme-dark .pagebox-btn--ghost {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-btn--ghost:hover,
+.pagebox-theme-dark .pagebox-btn--ghost:hover {
+  background: #1e293b;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-badge--muted,
+.pagebox-theme-dark .pagebox-badge--muted {
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pagebox-badge--info,
+.pagebox-theme-dark .pagebox-badge--info {
+  background: #1e1b4b;
+  color: #a5b4fc;
+}
+
+[data-theme="dark"] .pagebox-badge--warning,
+.pagebox-theme-dark .pagebox-badge--warning {
+  background: #451a03;
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .pagebox-badge--danger,
+.pagebox-theme-dark .pagebox-badge--danger {
+  background: #450a0a;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .pagebox-btn--lang,
+.pagebox-theme-dark .pagebox-btn--lang {
+  background: #1e293b;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pagebox-btn--lang:hover,
+.pagebox-theme-dark .pagebox-btn--lang:hover {
+  background: #334155;
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .pagebox-btn--outline-danger,
+.pagebox-theme-dark .pagebox-btn--outline-danger {
+  background: #1e293b;
+  border-color: #7f1d1d;
+  color: #f87171;
+}
+
+[data-theme="dark"] .pagebox-btn--outline-danger:hover,
+.pagebox-theme-dark .pagebox-btn--outline-danger:hover {
+  background: #450a0a;
+  border-color: #991b1b;
+  color: #fca5a5;
+}

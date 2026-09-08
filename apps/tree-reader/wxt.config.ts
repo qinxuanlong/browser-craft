@@ -12,6 +12,7 @@ export default defineConfig({
     description: "本地多级目录树、结构化文本与代码极速查看器",
     version: "0.0.1",
     permissions: ["storage", "tabs"],
+    host_permissions: ["file:///*"],
     action: {
       default_title: "PageBox — 目录速览",
       default_icon: {

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { isDevTestKey } from "@pagebox/core";
 import { CheckCircleIcon, CrownIcon, KeyIcon } from "./icons";
 import { useLicense } from "./useLicense";
+import { useTranslation } from "./i18n";
 
 export interface LicenseModalProps {
   isOpen: boolean;
@@ -11,13 +12,14 @@ export interface LicenseModalProps {
 /**
  * 格式化掩码显示许可证密钥，保护隐私
  */
-function maskLicenseKey(key?: string): string {
-  if (!key) return "未知密钥";
+function maskLicenseKey(key?: string, unknownText = "未知密钥"): string {
+  if (!key) return unknownText;
   if (key.length <= 8) return "********";
   return `${key.slice(0, 4)}-****-****-${key.slice(-4)}`;
 }
 
 export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
+  const { t } = useTranslation();
   const { isPro, licenseInfo, activating, error, setError, activate, deactivate, openCheckout } =
     useLicense();
 
@@ -31,7 +33,7 @@ export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
     setSuccessTip("");
     const trimmed = inputKey.trim();
     if (!trimmed) {
-      setError("请输入收到的 License Key 激活码");
+      setError(t.license.emptyKeyError);
       return;
     }
 
@@ -39,8 +41,8 @@ export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
     if (ok) {
       setSuccessTip(
         isDevTestKey(trimmed)
-          ? "恭喜！已通过测试码快速激活 Pro 会员特权 🎉"
-          : "恭喜！Pro 会员特权已成功激活 🎉"
+          ? t.license.testActivateSuccess
+          : t.license.activateSuccess,
       );
       setInputKey("");
       setTimeout(() => {
@@ -50,13 +52,11 @@ export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
   };
 
   const handleDeactivate = async () => {
-    const confirmed = window.confirm(
-      "确定要解除当前设备的绑定吗？解绑后将恢复免费版，该激活额度将归还，可用于其他设备。"
-    );
+    const confirmed = window.confirm(t.license.deactivateConfirm);
     if (!confirmed) return;
 
     await deactivate();
-    setSuccessTip("已成功解除当前设备绑定");
+    setSuccessTip(t.license.deactivateSuccess);
   };
 
   return (
@@ -72,13 +72,13 @@ export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
             <div className={`pagebox-pro-crown-badge ${isPro ? "pagebox-pro-crown-badge--active" : ""}`}>
               <CrownIcon size={18} />
             </div>
-            <h2>{isPro ? "PageBox Pro 尊享会员" : "升级到 PageBox Pro"}</h2>
+            <h2>{isPro ? t.license.proTitleActive : t.license.proTitleUpgrade}</h2>
           </div>
           <button
             type="button"
             className="pagebox-modal-close"
             onClick={onClose}
-            aria-label="关闭"
+            aria-label={t.license.close}
           >
             ✕
           </button>
@@ -90,22 +90,22 @@ export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
             <div className="pagebox-license-pro-view">
               <div className="pagebox-license-card">
                 <div className="pagebox-license-card__badge">
-                  <CheckCircleIcon size={16} /> 已激活生效中
+                  <CheckCircleIcon size={16} /> {t.license.activeBadge}
                   {isDevTestKey(licenseInfo.licenseKey) && (
                     <span style={{ fontSize: 11, opacity: 0.85, marginLeft: 4 }}>
-                      [测试授权]
+                      {t.license.testLicense}
                     </span>
                   )}
                 </div>
                 <div className="pagebox-license-info-row">
-                  <span className="pagebox-license-info-label">许可证密钥：</span>
+                  <span className="pagebox-license-info-label">{t.license.licenseKeyLabel}</span>
                   <span className="pagebox-license-info-value pagebox-mono">
-                    {maskLicenseKey(licenseInfo.licenseKey)}
+                    {maskLicenseKey(licenseInfo.licenseKey, t.license.unknownKey)}
                   </span>
                 </div>
                 {licenseInfo.customerEmail && (
                   <div className="pagebox-license-info-row">
-                    <span className="pagebox-license-info-label">绑定邮箱：</span>
+                    <span className="pagebox-license-info-label">{t.license.boundEmailLabel}</span>
                     <span className="pagebox-license-info-value">
                       {licenseInfo.customerEmail}
                     </span>
@@ -113,7 +113,7 @@ export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
                 )}
                 {licenseInfo.instanceName && (
                   <div className="pagebox-license-info-row">
-                    <span className="pagebox-license-info-label">当前设备：</span>
+                    <span className="pagebox-license-info-label">{t.license.currentDeviceLabel}</span>
                     <span className="pagebox-license-info-value">
                       {licenseInfo.instanceName}
                     </span>
@@ -122,10 +122,10 @@ export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
               </div>
 
               <div className="pagebox-license-perks">
-                <div className="pagebox-license-perk-item">✓ 智能重复链接检测与一键批量清理</div>
-                <div className="pagebox-license-perk-item">✓ 结构化 Markdown / HTML 书签文件导出</div>
-                <div className="pagebox-license-perk-item">✓ 无限层级深度分类与多维标签管理</div>
-                <div className="pagebox-license-perk-item">✓ 尊享后续全量新特权与功能升级</div>
+                <div className="pagebox-license-perk-item">{t.license.perk1}</div>
+                <div className="pagebox-license-perk-item">{t.license.perk2}</div>
+                <div className="pagebox-license-perk-item">{t.license.perk3}</div>
+                <div className="pagebox-license-perk-item">{t.license.perk4}</div>
               </div>
 
               {successTip && (
@@ -141,14 +141,14 @@ export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
                   onClick={handleDeactivate}
                   disabled={activating}
                 >
-                  {activating ? "正在解绑..." : "解除此设备绑定"}
+                  {activating ? t.license.deactivating : t.license.deactivateBtn}
                 </button>
                 <button
                   type="button"
                   className="pagebox-btn pagebox-btn--primary"
                   onClick={onClose}
                 >
-                  完成
+                  {t.license.doneBtn}
                 </button>
               </div>
             </div>
@@ -156,29 +156,29 @@ export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
             /* 未激活免费版视图 */
             <div className="pagebox-license-free-view">
               <p className="pagebox-license-lead">
-                激活 Pro 会员，解锁进阶管理工具，告别杂乱标签与重复网页。
+                {t.license.leadText}
               </p>
 
               <div className="pagebox-license-perks">
                 <div className="pagebox-license-perk-item">
                   <span className="pagebox-license-perk-icon">✨</span>
                   <div>
-                    <strong>智能重复链接清理</strong>
-                    <p>一键扫描并清理相同或冗余的标签页与书签，保持收藏库整洁。</p>
+                    <strong>{t.license.feature1Title}</strong>
+                    <p>{t.license.feature1Desc}</p>
                   </div>
                 </div>
                 <div className="pagebox-license-perk-item">
                   <span className="pagebox-license-perk-icon">📑</span>
                   <div>
-                    <strong>结构化文档高级导出</strong>
-                    <p>支持将收藏列表一键导出为 Markdown 与 HTML 文档，方便知识库沉淀。</p>
+                    <strong>{t.license.feature2Title}</strong>
+                    <p>{t.license.feature2Desc}</p>
                   </div>
                 </div>
                 <div className="pagebox-license-perk-item">
                   <span className="pagebox-license-perk-icon">🏷️</span>
                   <div>
-                    <strong>多维标签 (Tags) 检索过滤</strong>
-                    <p>告别单一目录树，通过灵活标签跨文件夹聚合目标网页。</p>
+                    <strong>{t.license.feature3Title}</strong>
+                    <p>{t.license.feature3Desc}</p>
                   </div>
                 </div>
               </div>
@@ -189,10 +189,10 @@ export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
                   className="pagebox-btn pagebox-btn--buy"
                   onClick={openCheckout}
                 >
-                  去 Lemon Squeezy 购买 License →
+                  {t.license.buyBtn}
                 </button>
                 <span className="pagebox-license-buy-hint">
-                  买断终身使用 · 支持多台设备激活
+                  {t.license.buyHint}
                 </span>
               </div>
 
@@ -200,7 +200,7 @@ export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
 
               <form onSubmit={handleActivateSubmit} className="pagebox-license-form">
                 <label className="pagebox-license-form-label" htmlFor="license-input">
-                  已有激活码？在此输入激活：
+                  {t.license.hasKeyLabel}
                 </label>
                 <div className="pagebox-license-input-group">
                   <div className="pagebox-license-input-wrapper">
@@ -211,7 +211,7 @@ export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
                       id="license-input"
                       type="text"
                       className="pagebox-input pagebox-license-input"
-                      placeholder="粘贴 License Key (本地测试可用: DEV-TEST-KEY)"
+                      placeholder={t.license.placeholder}
                       value={inputKey}
                       onChange={(e) => {
                         setInputKey(e.target.value);
@@ -227,7 +227,7 @@ export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
                     className="pagebox-btn pagebox-btn--activate"
                     disabled={activating || !inputKey.trim()}
                   >
-                    {activating ? "验证中..." : "激活"}
+                    {activating ? t.license.validating : t.license.activateBtn}
                   </button>
                 </div>
 

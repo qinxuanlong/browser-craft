@@ -10,9 +10,13 @@ import {
   CrownIcon,
   ExternalLinkIcon,
   FolderYellowIcon,
+  GlobeIcon,
   GripVerticalIcon,
+  MoonIcon,
   PageBoxLogo,
   PlusIcon,
+  SettingsIcon,
+  SunIcon,
   ThisPcIcon,
   TrashIcon,
   UnfoldLessIcon,
@@ -22,11 +26,16 @@ import {
 import { LicenseModal } from "./LicenseModal";
 import { useLicense } from "./useLicense";
 import { StatisticsDashboard } from "./StatisticsDashboard";
+import { SettingsView } from "./SettingsView";
+import { I18nProvider, useTranslation } from "./i18n";
+import { ThemeProvider, useTheme } from "./ThemeContext";
 import "./styles.css";
 
-type NavigationFilter = "all" | "uncategorized" | "windows" | "bookmarks" | "statistics" | string; // string is folderId
+type NavigationFilter = "all" | "uncategorized" | "windows" | "bookmarks" | "statistics" | "settings" | string; // string is folderId
 
-export function ManagerApp() {
+function ManagerAppInner() {
+  const { locale, toggleLocale, t } = useTranslation();
+  const { resolvedTheme, toggleTheme } = useTheme();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [tabs, setTabs] = useState<SavedTab[]>([]);
   const [windows, setWindows] = useState<SavedWindow[]>([]);
@@ -92,16 +101,31 @@ export function ManagerApp() {
       activeNav === "uncategorized" ||
       activeNav === "windows" ||
       activeNav === "bookmarks" ||
-      activeNav === "statistics"
+      activeNav === "statistics" ||
+      activeNav === "settings"
     ) {
       return null;
     }
     return folders.find((f) => f.id === activeNav) ?? null;
   }, [activeNav, folders]);
 
+  // 计算当前重复书签数量
+  const duplicateCount = useMemo(() => {
+    const seen = new Set<string>();
+    let count = 0;
+    for (const tab of tabs) {
+      if (seen.has(tab.url)) {
+        count++;
+      } else {
+        seen.add(tab.url);
+      }
+    }
+    return count;
+  }, [tabs]);
+
   // 根据当前侧边栏导航筛选展示的内容
   const displayedTabs = useMemo(() => {
-    if (activeNav === "statistics") return [];
+    if (activeNav === "statistics" || activeNav === "settings") return [];
     let list: SavedTab[] = [];
     if (query.trim()) list = tabs;
     else if (activeNav === "all") list = tabs;
@@ -114,7 +138,7 @@ export function ManagerApp() {
   }, [activeNav, tabs, query]);
 
   const displayedWindows = useMemo(() => {
-    if (activeNav === "statistics") return [];
+    if (activeNav === "statistics" || activeNav === "settings") return [];
     let list: SavedWindow[] = [];
     if (query.trim()) list = windows;
     else if (activeNav === "all" || activeNav === "windows") list = windows;
@@ -127,12 +151,13 @@ export function ManagerApp() {
 
   // 面包屑导航计算
   const breadcrumbList = useMemo(() => {
-    if (query.trim()) return [{ id: "search", name: `搜索: "${query}"` }];
-    if (activeNav === "statistics") return [{ id: "statistics", name: "统计看板" }];
-    if (activeNav === "all") return [{ id: "all", name: "全部收藏" }];
-    if (activeNav === "uncategorized") return [{ id: "uncategorized", name: "未分类" }];
-    if (activeNav === "windows") return [{ id: "windows", name: "已收藏窗口" }];
-    if (activeNav === "bookmarks") return [{ id: "bookmarks", name: "浏览器书签" }];
+    if (query.trim()) return [{ id: "search", name: t.manager.searchBreadcrumb(query) }];
+    if (activeNav === "statistics") return [{ id: "statistics", name: t.sidebar.statistics }];
+    if (activeNav === "settings") return [{ id: "settings", name: t.sidebar.settings }];
+    if (activeNav === "all") return [{ id: "all", name: t.sidebar.allBookmarks }];
+    if (activeNav === "uncategorized") return [{ id: "uncategorized", name: t.sidebar.uncategorized }];
+    if (activeNav === "windows") return [{ id: "windows", name: t.sidebar.savedWindows }];
+    if (activeNav === "bookmarks") return [{ id: "bookmarks", name: t.manager.browserBookmarks }];
 
     const path: { id: string; name: string }[] = [];
     let cur: Folder | undefined = currentFolder ?? undefined;
@@ -141,17 +166,17 @@ export function ManagerApp() {
       cur = cur.parentId ? folders.find((f) => f.id === cur?.parentId) : undefined;
     }
     return path;
-  }, [activeNav, currentFolder, folders, query]);
+  }, [activeNav, currentFolder, folders, query, t]);
 
   // 快捷操作
   const handleRestoreTab = async (tab: SavedTab) => {
     await pageBoxService.restoreTab(tab.id);
-    showStatus("已打开标签页");
+    showStatus(t.manager.openedTab);
   };
 
   const handleRestoreWindow = async (win: SavedWindow) => {
     await pageBoxService.restoreWindow(win.id);
-    showStatus(`已恢复 ${win.tabs.length} 个标签页`);
+    showStatus(t.manager.restoredTabs(win.tabs.length));
   };
 
   const handleDeleteTab = async (tab: SavedTab) => {
@@ -161,13 +186,13 @@ export function ManagerApp() {
       next.delete(tab.id);
       return next;
     });
-    showStatus("已删除");
+    showStatus(t.manager.deleted);
     await refresh();
   };
 
   const handleDeleteWindow = async (win: SavedWindow) => {
     await pageBoxService.deleteWindow(win.id);
-    showStatus("已删除");
+    showStatus(t.manager.deleted);
     await refresh();
   };
 
@@ -177,7 +202,7 @@ export function ManagerApp() {
     for (const tab of displayedTabs) {
       await chrome.tabs.create({ url: tab.url, active: false });
     }
-    showStatus(`已打开 ${displayedTabs.length} 个标签页`);
+    showStatus(t.manager.openedTabs(displayedTabs.length));
   };
 
   // 批量全选 / 反选
@@ -204,17 +229,17 @@ export function ManagerApp() {
     for (const tab of selected) {
       await chrome.tabs.create({ url: tab.url, active: false });
     }
-    showStatus(`已打开选中的 ${selected.length} 个标签页`);
+    showStatus(t.manager.batchOpenedTabs(selected.length));
   };
 
   // 批量删除选中的标签
   const handleBatchDelete = async () => {
-    if (!confirm(`确定要删除选中的 ${selectedTabIds.size} 个标签吗？`)) return;
+    if (!confirm(t.manager.batchDeleteConfirm(selectedTabIds.size))) return;
     for (const id of selectedTabIds) {
       await pageBoxService.deleteTab(id);
     }
     setSelectedTabIds(new Set());
-    showStatus("批量删除完成");
+    showStatus(t.manager.batchDeleteDone);
     await refresh();
   };
 
@@ -230,13 +255,13 @@ export function ManagerApp() {
     const newFolder = await pageBoxService.createFolder(folderModalName.trim(), folderModalParentId);
     setFolderModalOpen(false);
     setActiveNav(newFolder.id);
-    showStatus(`文件夹 "${newFolder.name}" 创建成功`);
+    showStatus(t.manager.createFolderSuccess(newFolder.name));
     await refresh();
   };
 
   const handleOpenRename = (folder: Folder) => {
     if (folder.id === "1" || folder.id === "2" || folder.parentId === null) {
-      showStatus("浏览器系统根文件夹不可重命名");
+      showStatus(t.manager.systemFolderNoRename);
       return;
     }
     setRenameTarget(folder);
@@ -247,21 +272,21 @@ export function ManagerApp() {
     if (!renameTarget || !renameDraft.trim()) return;
     await pageBoxService.renameFolder(renameTarget.id, renameDraft.trim());
     setRenameTarget(null);
-    showStatus("重命名成功");
+    showStatus(t.manager.renameFolderSuccess);
     await refresh();
   };
 
   const handleDeleteFolder = async (folder: Folder) => {
     if (folder.id === "1" || folder.id === "2" || folder.parentId === null) {
-      showStatus("浏览器系统根文件夹不可删除");
+      showStatus(t.manager.systemFolderNoDelete);
       return;
     }
-    if (confirm(`确定要删除文件夹 "${folder.name}" 吗？（内部标签将被保留并移至上一级目录）`)) {
+    if (confirm(t.manager.deleteFolderKeepContentsConfirm(folder.name))) {
       await pageBoxService.deleteFolder(folder.id, false);
       if (activeNav === folder.id) {
         setActiveNav("all");
       }
-      showStatus("文件夹已删除");
+      showStatus(t.manager.folderDeleted);
       await refresh();
     }
   };
@@ -271,7 +296,7 @@ export function ManagerApp() {
     if (!moveTargetTabId) return;
     await pageBoxService.moveTabToFolder(moveTargetTabId, targetFolderId);
     setMoveTargetTabId(null);
-    showStatus("标签移动成功");
+    showStatus(t.manager.moveTabSuccess);
     await refresh();
   };
 
@@ -279,7 +304,7 @@ export function ManagerApp() {
   const handleBatchMove = async (targetFolderId: Id | null) => {
     await pageBoxService.moveTabsToFolder(Array.from(selectedTabIds), targetFolderId);
     setSelectedTabIds(new Set());
-    showStatus("批量移动完成");
+    showStatus(t.manager.batchMoveDone);
     await refresh();
   };
 
@@ -290,10 +315,10 @@ export function ManagerApp() {
   ) => {
     try {
       await pageBoxService.moveTabsToFolder(tabIds, targetFolderId);
-      showStatus(`已移动 ${tabIds.length} 个标签到目标文件夹`);
+      showStatus(t.manager.droppedTabsToFolder(tabIds.length));
       await refresh();
     } catch (err) {
-      showStatus(err instanceof Error ? err.message : "移动失败");
+      showStatus(err instanceof Error ? err.message : "Error");
     }
   };
 
@@ -305,10 +330,10 @@ export function ManagerApp() {
   ) => {
     try {
       await pageBoxService.moveFolder(sourceFolderId, targetFolderId, position);
-      showStatus(position === "inside" ? "已移入文件夹" : "已更新文件夹排序");
+      showStatus(position === "inside" ? t.manager.movedFolderInside : t.manager.reorderedFolder);
       await refresh();
     } catch (err) {
-      showStatus(err instanceof Error ? err.message : "调整文件夹失败");
+      showStatus(err instanceof Error ? err.message : "Error");
     }
   };
 
@@ -322,7 +347,7 @@ export function ManagerApp() {
     a.download = `pagebox-backup-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showStatus("导出成功");
+    showStatus(t.manager.exportJsonSuccess);
   };
 
   const handleImport = async () => {
@@ -336,10 +361,10 @@ export function ManagerApp() {
         const text = await file.text();
         const data = JSON.parse(text);
         await pageBoxService.importData(data, true);
-        showStatus("导入成功");
+        showStatus(t.manager.importSuccess(data.tabs?.length ?? 0, data.folders?.length ?? 0));
         await refresh();
       } catch {
-        showStatus("导入失败，请检查文件格式");
+        showStatus(t.manager.importFailed);
       }
     };
     input.click();
@@ -365,19 +390,19 @@ export function ManagerApp() {
     }
 
     if (duplicates.length === 0) {
-      showStatus("未检测到重复标签页，收藏库非常整洁！");
+      showStatus(t.manager.cleanDuplicatesNoDups);
       return;
     }
 
     const confirmed = window.confirm(
-      `检测到 ${duplicates.length} 个重复的网页标签，是否一键清理重复项并保留首个？`
+      t.manager.cleanDuplicatesPrompt(duplicates.length)
     );
     if (!confirmed) return;
 
     for (const dup of duplicates) {
       await pageBoxService.deleteTab(dup.id);
     }
-    showStatus(`已智能清理 ${duplicates.length} 个重复网页`);
+    showStatus(t.manager.cleanDuplicatesDone(duplicates.length));
     await refresh();
   };
 
@@ -391,10 +416,10 @@ export function ManagerApp() {
     }
 
     const store = await pageBoxService.getStore();
-    let md = `# PageBox 标签页收藏清单\n\n> 导出时间：${new Date().toLocaleString()}\n\n`;
+    let md = `# PageBox ${t.manager.exportMarkdown}\n\n> ${new Date().toLocaleString()}\n\n`;
 
     if (store.tabs.length > 0) {
-      md += `## 标签列表 (${store.tabs.length})\n\n`;
+      md += `## ${t.tree.tabsCount(store.tabs.length)}\n\n`;
       for (const tab of store.tabs) {
         const noteText = tab.notes ? ` —— *${tab.notes}*` : "";
         md += `- [${tab.title || tab.url}](${tab.url})${noteText}\n`;
@@ -403,7 +428,7 @@ export function ManagerApp() {
     }
 
     if (store.windows.length > 0) {
-      md += `## 窗口集合 (${store.windows.length})\n\n`;
+      md += `## ${t.manager.windowCollection(store.windows.length)}\n\n`;
       for (const win of store.windows) {
         md += `### ${win.name}\n\n`;
         for (const tab of win.tabs) {
@@ -420,7 +445,7 @@ export function ManagerApp() {
     a.download = `pagebox-export-${Date.now()}.md`;
     a.click();
     URL.revokeObjectURL(url);
-    showStatus("Markdown 文档已成功导出");
+    showStatus(t.manager.exportMarkdownSuccess);
   };
 
   const isAllSelected =
@@ -432,26 +457,26 @@ export function ManagerApp() {
       <header className="pagebox-manager__header">
         <div className="pagebox-manager__brand">
           <PageBoxLogo size={26} className="pagebox-manager__logo" />
-          <h1 className="pagebox-manager__title">PageBox 标签管理中心</h1>
+          <h1 className="pagebox-manager__title">{t.header.managerTitle}</h1>
           {isPro ? (
             <button
               type="button"
               className="pagebox-pro-badge pagebox-pro-badge--active"
               onClick={() => setLicenseModalOpen(true)}
-              title="Pro 尊享特权生效中，点击查看授权详情"
+              title={t.header.proActiveTitle}
             >
               <CrownIcon size={12} />
-              <span>PRO</span>
+              <span>{t.header.proBadge}</span>
             </button>
           ) : (
             <button
               type="button"
               className="pagebox-pro-badge pagebox-pro-badge--upgrade"
               onClick={() => setLicenseModalOpen(true)}
-              title="升级 Pro 解锁高级特权"
+              title={t.header.upgradeProTitle}
             >
               <CrownIcon size={12} />
-              <span>升级 Pro</span>
+              <span>{t.header.upgradePro}</span>
             </button>
           )}
         </div>
@@ -459,7 +484,7 @@ export function ManagerApp() {
         <div className="pagebox-manager__search-box">
           <input
             type="search"
-            placeholder="全文检索（标题、URL、备注、标签）…"
+            placeholder={t.search.managerPlaceholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -467,40 +492,28 @@ export function ManagerApp() {
 
         <div className="pagebox-manager__top-actions">
           <button
-            className={`pagebox-btn ${activeNav === "statistics" ? "pagebox-btn--highlight" : ""}`}
-            onClick={() => {
-              setActiveNav("statistics");
-              setQuery("");
-            }}
-            title="书签全维数据统计与健康治理看板"
-          >
-            <ChartBarIcon size={14} /> 统计看板
-          </button>
-          <button
             className="pagebox-btn pagebox-btn--primary"
             onClick={() => handleOpenCreateFolderModal(currentFolder?.id ?? null)}
           >
-            <PlusIcon size={14} /> 新建文件夹
+            <PlusIcon size={14} /> {t.manager.newFolderBtn}
           </button>
           <button
-            className="pagebox-btn"
-            onClick={handleCleanDuplicates}
-            title="一键智能清理重复网页"
+            className={`pagebox-btn ${activeNav === "settings" ? "pagebox-btn--highlight" : ""}`}
+            onClick={() => {
+              setActiveNav("settings");
+              setQuery("");
+            }}
+            title={t.sidebar.settings}
           >
-            清理重复
+            <SettingsIcon size={14} /> {t.sidebar.settings}
           </button>
           <button
-            className="pagebox-btn"
-            onClick={handleExportMarkdown}
-            title="导出为 Markdown 结构化文档"
+            type="button"
+            className="pagebox-btn pagebox-btn--ghost pagebox-btn--icon"
+            onClick={toggleTheme}
+            title={resolvedTheme === "dark" ? t.settings.themeLight : t.settings.themeDark}
           >
-            导出 Markdown
-          </button>
-          <button className="pagebox-btn" onClick={handleExport}>
-            导出 JSON
-          </button>
-          <button className="pagebox-btn" onClick={handleImport}>
-            导入 JSON
+            {resolvedTheme === "dark" ? <SunIcon size={15} /> : <MoonIcon size={15} />}
           </button>
         </div>
       </header>
@@ -510,7 +523,7 @@ export function ManagerApp() {
         {/* 左侧 Windows 资源管理器风格导航栏 */}
         <aside className="pagebox-manager__sidebar">
           <div className="pagebox-sidebar__section-header">
-            <span>此电脑 / 快捷导航</span>
+            <span>{t.sidebar.thisPc}</span>
           </div>
 
           <nav className="pagebox-sidebar__nav">
@@ -519,7 +532,7 @@ export function ManagerApp() {
               onClick={() => setActiveNav("all")}
             >
               <ThisPcIcon size={16} />
-              <span className="pagebox-sidebar__nav-label">全部收藏</span>
+              <span className="pagebox-sidebar__nav-label">{t.sidebar.allBookmarks}</span>
               <span className="pagebox-sidebar__nav-badge">{tabs.length}</span>
             </button>
 
@@ -533,7 +546,7 @@ export function ManagerApp() {
               }}
             >
               <ChartBarIcon size={16} />
-              <span className="pagebox-sidebar__nav-label">统计看板</span>
+              <span className="pagebox-sidebar__nav-label">{t.sidebar.statistics}</span>
               <span className="pagebox-sidebar__nav-badge">{tabs.length}</span>
             </button>
 
@@ -544,7 +557,7 @@ export function ManagerApp() {
               onClick={() => setActiveNav("uncategorized")}
             >
               <span className="pagebox-tree-icon">📁</span>
-              <span className="pagebox-sidebar__nav-label">未分类标签</span>
+              <span className="pagebox-sidebar__nav-label">{t.sidebar.uncategorized}</span>
               <span className="pagebox-sidebar__nav-badge">
                 {tabs.filter((t) => t.folderId === null).length}
               </span>
@@ -555,20 +568,31 @@ export function ManagerApp() {
               onClick={() => setActiveNav("windows")}
             >
               <WindowGroupIcon size={16} />
-              <span className="pagebox-sidebar__nav-label">已收藏窗口</span>
+              <span className="pagebox-sidebar__nav-label">{t.sidebar.savedWindows}</span>
               <span className="pagebox-sidebar__nav-badge">{windows.length}</span>
+            </button>
+
+            <button
+              className={`pagebox-sidebar__nav-item ${activeNav === "settings" ? "is-active" : ""}`}
+              onClick={() => {
+                setActiveNav("settings");
+                setQuery("");
+              }}
+            >
+              <SettingsIcon size={16} />
+              <span className="pagebox-sidebar__nav-label">{t.sidebar.settings}</span>
             </button>
           </nav>
 
           <div className="pagebox-sidebar__section-header">
-            <span>文件夹树 (Windows 目录展开)</span>
+            <span>{t.sidebar.folderTree}</span>
             <div className="pagebox-sidebar__header-actions">
               <button
                 type="button"
                 className="pagebox-sidebar__add-btn"
                 onClick={() => sidebarTreeRef.current?.expandAll()}
-                title="全部展开"
-                aria-label="全部展开"
+                title={t.sidebar.expandAll}
+                aria-label={t.sidebar.expandAll}
               >
                 <UnfoldMoreIcon size={13} />
               </button>
@@ -576,8 +600,8 @@ export function ManagerApp() {
                 type="button"
                 className="pagebox-sidebar__add-btn"
                 onClick={() => sidebarTreeRef.current?.collapseAll()}
-                title="全部收起"
-                aria-label="全部收起"
+                title={t.sidebar.collapseAll}
+                aria-label={t.sidebar.collapseAll}
               >
                 <UnfoldLessIcon size={13} />
               </button>
@@ -585,8 +609,8 @@ export function ManagerApp() {
                 type="button"
                 className="pagebox-sidebar__add-btn"
                 onClick={() => handleOpenCreateFolderModal(null)}
-                title="新建根文件夹"
-                aria-label="新建根文件夹"
+                title={t.sidebar.newRootFolder}
+                aria-label={t.sidebar.newRootFolder}
               >
                 <PlusIcon size={12} />
               </button>
@@ -604,7 +628,9 @@ export function ManagerApp() {
                 activeNav === "all" ||
                 activeNav === "uncategorized" ||
                 activeNav === "windows" ||
-                activeNav === "bookmarks"
+                activeNav === "bookmarks" ||
+                activeNav === "statistics" ||
+                activeNav === "settings"
                   ? null
                   : activeNav
               }
@@ -623,7 +649,7 @@ export function ManagerApp() {
           {/* 面包屑与路径工具栏 */}
           <div className="pagebox-content__breadcrumb-bar">
             <div className="pagebox-breadcrumbs">
-              <span className="pagebox-breadcrumbs__root">此电脑</span>
+              <span className="pagebox-breadcrumbs__root">{t.manager.thisPc}</span>
               {breadcrumbList.map((item) => (
                 <span key={item.id} className="pagebox-breadcrumbs__crumb">
                   <ChevronRight size={10} />
@@ -637,9 +663,9 @@ export function ManagerApp() {
                 <button
                   className="pagebox-btn pagebox-btn--sm"
                   onClick={handleOpenAllInView}
-                  title="全部在新标签页中打开"
+                  title={t.manager.openAllInViewTitle}
                 >
-                  <ExternalLinkIcon size={13} /> 全部打开 ({displayedTabs.length})
+                  <ExternalLinkIcon size={13} /> {t.manager.openAllInView(displayedTabs.length)}
                 </button>
               )}
               {currentFolder && (
@@ -648,7 +674,7 @@ export function ManagerApp() {
                     className="pagebox-btn pagebox-btn--sm"
                     onClick={() => handleOpenCreateFolderModal(currentFolder.id)}
                   >
-                    <PlusIcon size={12} /> 子文件夹
+                    <PlusIcon size={12} /> {t.manager.subfolder}
                   </button>
                   {currentFolder.id !== "1" &&
                     currentFolder.id !== "2" &&
@@ -658,13 +684,13 @@ export function ManagerApp() {
                           className="pagebox-btn pagebox-btn--sm"
                           onClick={() => handleOpenRename(currentFolder)}
                         >
-                          重命名
+                          {t.manager.rename}
                         </button>
                         <button
                           className="pagebox-btn pagebox-btn--sm pagebox-btn--danger"
                           onClick={() => handleDeleteFolder(currentFolder)}
                         >
-                          <TrashIcon size={12} /> 删除
+                          <TrashIcon size={12} /> {t.manager.delete}
                         </button>
                       </>
                     )}
@@ -685,6 +711,17 @@ export function ManagerApp() {
               }}
               showStatus={showStatus}
             />
+          ) : activeNav === "settings" ? (
+            <SettingsView
+              onCleanDuplicates={handleCleanDuplicates}
+              onExportMarkdown={handleExportMarkdown}
+              onExportJson={handleExport}
+              onImportJson={handleImport}
+              duplicateCount={duplicateCount}
+              totalTabsCount={tabs.length}
+              isPro={isPro}
+              onOpenLicenseModal={() => setLicenseModalOpen(true)}
+            />
           ) : (
             <>
               {/* 批量操作控制条 */}
@@ -696,19 +733,19 @@ export function ManagerApp() {
                   checked={isAllSelected}
                   onChange={handleToggleSelectAll}
                 />
-                <span>全选当前视图 ({displayedTabs.length})</span>
+                <span>{t.manager.selectAll(displayedTabs.length)}</span>
               </label>
 
               {selectedTabIds.size > 0 && (
                 <div className="pagebox-batch-bar__actions">
                   <span className="pagebox-batch-bar__count">
-                    已勾选 {selectedTabIds.size} 项
+                    {t.manager.selectedCount(selectedTabIds.size)}
                   </span>
                   <button
                     className="pagebox-btn pagebox-btn--sm"
                     onClick={handleBatchOpen}
                   >
-                    打开勾选项
+                    {t.manager.openSelected}
                   </button>
                   <div className="pagebox-batch-bar__move">
                     <select
@@ -720,9 +757,9 @@ export function ManagerApp() {
                       defaultValue=""
                     >
                       <option value="" disabled>
-                        批量移动至…
+                        {t.manager.batchMoveTo}
                       </option>
-                      <option value="null">移至「未分类」</option>
+                      <option value="null">{t.manager.moveToUncategorized}</option>
                       {folders.map((f) => (
                         <option key={f.id} value={f.id}>
                           📁 {f.name}
@@ -734,7 +771,7 @@ export function ManagerApp() {
                     className="pagebox-btn pagebox-btn--sm pagebox-btn--danger"
                     onClick={handleBatchDelete}
                   >
-                    批量删除
+                    {t.manager.batchDelete}
                   </button>
                 </div>
               )}
@@ -746,9 +783,9 @@ export function ManagerApp() {
             {displayedTabs.length === 0 && displayedWindows.length === 0 ? (
               <div className="pagebox-manager__empty">
                 <FolderYellowIcon size={48} />
-                <p className="pagebox-empty__title">此文件夹下暂无内容</p>
+                <p className="pagebox-empty__title">{t.manager.emptyFolderTitle}</p>
                 <p className="pagebox-empty__subtitle">
-                  切换到其他目录浏览，或在上方点击「新建文件夹」与「同步书签」
+                  {t.manager.emptyFolderDesc}
                 </p>
               </div>
             ) : (
@@ -757,7 +794,7 @@ export function ManagerApp() {
                 {displayedWindows.length > 0 && (
                   <section className="pagebox-list-section">
                     <h2 className="pagebox-list-section__title">
-                      窗口集合 ({displayedWindows.length})
+                      {t.manager.windowCollection(displayedWindows.length)}
                     </h2>
                     <div className="pagebox-cards-grid">
                       {displayedWindows.map((win) => (
@@ -766,7 +803,7 @@ export function ManagerApp() {
                             <WindowGroupIcon size={18} />
                             <span className="pagebox-window-card__title">{win.name}</span>
                             <span className="pagebox-window-card__count">
-                              {win.tabs.length} 标签
+                              {t.manager.tabsCount(win.tabs.length)}
                             </span>
                           </div>
                           <div className="pagebox-window-card__tabs">
@@ -783,7 +820,7 @@ export function ManagerApp() {
                             ))}
                             {win.tabs.length > 4 && (
                               <div className="pagebox-window-card__more">
-                                + 还有 {win.tabs.length - 4} 个…
+                                {t.manager.moreTabs(win.tabs.length - 4)}
                               </div>
                             )}
                           </div>
@@ -792,13 +829,13 @@ export function ManagerApp() {
                               className="pagebox-btn pagebox-btn--sm pagebox-btn--primary"
                               onClick={() => handleRestoreWindow(win)}
                             >
-                              恢复窗口
+                              {t.manager.restoreWindow}
                             </button>
                             <button
                               className="pagebox-btn pagebox-btn--sm"
                               onClick={() => handleDeleteWindow(win)}
                             >
-                              删除
+                              {t.manager.delete}
                             </button>
                           </div>
                         </div>
@@ -811,7 +848,7 @@ export function ManagerApp() {
                 {displayedTabs.length > 0 && (
                   <section className="pagebox-list-section">
                     <h2 className="pagebox-list-section__title">
-                      标签页 ({displayedTabs.length})
+                      {t.manager.tabSectionTitle(displayedTabs.length)}
                     </h2>
                     <div className="pagebox-table-list">
                       {displayedTabs.map((tab) => {
@@ -895,13 +932,13 @@ export function ManagerApp() {
                               void pageBoxService
                                 .reorderTabs(updated.map((t) => t.id))
                                 .then(() => {
-                                  showStatus("已更新排序");
+                                  showStatus(t.manager.orderUpdated);
                                 });
                             }}
                           >
                             <div
                               className="pagebox-tab-row__drag-handle"
-                              title="拖拽调整排序或拖动至左侧文件夹"
+                              title={t.manager.dragHandleTitle}
                               onClick={(e) => e.stopPropagation()}
                             >
                               <GripVerticalIcon size={14} />
@@ -947,7 +984,7 @@ export function ManagerApp() {
                                   📁 {tabFolder.name}
                                 </span>
                               ) : (
-                                <span className="folder-badge folder-badge--none">未分类</span>
+                                <span className="folder-badge folder-badge--none">{t.manager.uncategorizedBadge}</span>
                               )}
                             </div>
 
@@ -955,9 +992,9 @@ export function ManagerApp() {
                               <button
                                 className="pagebox-action-btn"
                                 onClick={() => handleRestoreTab(tab)}
-                                title="在新标签页打开"
+                                title={t.manager.openInNewTab}
                               >
-                                打开
+                                {t.manager.open}
                               </button>
                               <button
                                 className="pagebox-action-btn"
@@ -965,23 +1002,23 @@ export function ManagerApp() {
                                   setNotesTarget(tab);
                                   setNotesDraft(tab.notes ?? "");
                                 }}
-                                title="编辑备注"
+                                title={t.manager.editNotes}
                               >
-                                备注
+                                {t.manager.notes}
                               </button>
                               <button
                                 className="pagebox-action-btn"
                                 onClick={() => setMoveTargetTabId(tab.id)}
-                                title="移动到文件夹"
+                                title={t.manager.moveToFolder}
                               >
-                                移动
+                                {t.manager.move}
                               </button>
                               <button
                                 className="pagebox-action-btn pagebox-action-btn--danger"
                                 onClick={() => handleDeleteTab(tab)}
-                                title="删除"
+                                title={t.manager.delete}
                               >
-                                删除
+                                {t.manager.delete}
                               </button>
                             </div>
                           </div>
@@ -1006,23 +1043,23 @@ export function ManagerApp() {
         <div className="pagebox-modal-backdrop" onClick={() => setFolderModalOpen(false)}>
           <div className="pagebox-modal" onClick={(e) => e.stopPropagation()}>
             <div className="pagebox-modal-header">
-              <h2>新建文件夹</h2>
+              <h2>{t.manager.createFolderTitle}</h2>
               <button
                 type="button"
                 className="pagebox-modal-close"
                 onClick={() => setFolderModalOpen(false)}
-                title="关闭"
+                title={t.license.close}
               >
                 <CloseIcon size={14} />
               </button>
             </div>
             <div className="pagebox-modal__tip">
-              <span className="pagebox-modal__tip-label">父级位置:</span>
+              <span className="pagebox-modal__tip-label">{t.manager.parentLocation}</span>
               <span className="pagebox-modal__tip-badge">
                 <FolderYellowIcon size={14} />
                 {folderModalParentId
-                  ? folders.find((f) => f.id === folderModalParentId)?.name ?? "根目录"
-                  : "根目录"}
+                  ? folders.find((f) => f.id === folderModalParentId)?.name ?? t.manager.rootFolder
+                  : t.manager.rootFolder}
               </span>
             </div>
             <input
@@ -1030,7 +1067,7 @@ export function ManagerApp() {
               autoFocus
               value={folderModalName}
               onChange={(e) => setFolderModalName(e.target.value)}
-              placeholder="请输入文件夹名称…"
+              placeholder={t.manager.folderNamePlaceholder}
               onKeyDown={(e) => {
                 if (e.key === "Enter") void handleCreateFolder();
                 if (e.key === "Escape") setFolderModalOpen(false);
@@ -1038,14 +1075,14 @@ export function ManagerApp() {
             />
             <div className="pagebox-modal__actions">
               <button className="pagebox-btn" onClick={() => setFolderModalOpen(false)}>
-                取消
+                {t.manager.cancelBtn}
               </button>
               <button
                 className="pagebox-btn pagebox-btn--primary"
                 onClick={handleCreateFolder}
                 disabled={!folderModalName.trim()}
               >
-                创建
+                {t.manager.createBtn}
               </button>
             </div>
           </div>
@@ -1057,12 +1094,12 @@ export function ManagerApp() {
         <div className="pagebox-modal-backdrop" onClick={() => setRenameTarget(null)}>
           <div className="pagebox-modal" onClick={(e) => e.stopPropagation()}>
             <div className="pagebox-modal-header">
-              <h2>重命名文件夹</h2>
+              <h2>{t.manager.renameFolderTitle}</h2>
               <button
                 type="button"
                 className="pagebox-modal-close"
                 onClick={() => setRenameTarget(null)}
-                title="关闭"
+                title={t.license.close}
               >
                 <CloseIcon size={14} />
               </button>
@@ -1072,7 +1109,7 @@ export function ManagerApp() {
               autoFocus
               value={renameDraft}
               onChange={(e) => setRenameDraft(e.target.value)}
-              placeholder="请输入新的文件夹名称"
+              placeholder={t.manager.renameFolderPlaceholder}
               onKeyDown={(e) => {
                 if (e.key === "Enter") void handleSaveRename();
                 if (e.key === "Escape") setRenameTarget(null);
@@ -1080,14 +1117,14 @@ export function ManagerApp() {
             />
             <div className="pagebox-modal__actions">
               <button className="pagebox-btn" onClick={() => setRenameTarget(null)}>
-                取消
+                {t.manager.cancelBtn}
               </button>
               <button
                 className="pagebox-btn pagebox-btn--primary"
                 onClick={handleSaveRename}
                 disabled={!renameDraft.trim()}
               >
-                保存
+                {t.manager.saveBtn}
               </button>
             </div>
           </div>
@@ -1099,18 +1136,18 @@ export function ManagerApp() {
         <div className="pagebox-modal-backdrop" onClick={() => setMoveTargetTabId(null)}>
           <div className="pagebox-modal" onClick={(e) => e.stopPropagation()}>
             <div className="pagebox-modal-header">
-              <h2>移动标签至文件夹</h2>
+              <h2>{t.manager.moveTabModalTitle}</h2>
               <button
                 type="button"
                 className="pagebox-modal-close"
                 onClick={() => setMoveTargetTabId(null)}
-                title="关闭"
+                title={t.license.close}
               >
                 <CloseIcon size={14} />
               </button>
             </div>
             <div className="pagebox-modal__tip">
-              <span className="pagebox-modal__tip-label">请选择目标文件夹：</span>
+              <span className="pagebox-modal__tip-label">{t.manager.selectTargetFolder}</span>
             </div>
             <div className="pagebox-folder-select-list">
               <button
@@ -1118,7 +1155,7 @@ export function ManagerApp() {
                 className="pagebox-folder-select-item"
                 onClick={() => handleMoveTab(null)}
               >
-                <FolderYellowIcon size={15} /> 未分类（移出文件夹）
+                <FolderYellowIcon size={15} /> {t.manager.uncategorizedRemoveFromFolder}
               </button>
               {folders.map((f) => (
                 <button
@@ -1133,7 +1170,7 @@ export function ManagerApp() {
             </div>
             <div className="pagebox-modal__actions">
               <button className="pagebox-btn" onClick={() => setMoveTargetTabId(null)}>
-                取消
+                {t.manager.cancelBtn}
               </button>
             </div>
           </div>
@@ -1145,12 +1182,12 @@ export function ManagerApp() {
         <div className="pagebox-modal-backdrop" onClick={() => setNotesTarget(null)}>
           <div className="pagebox-modal" onClick={(e) => e.stopPropagation()}>
             <div className="pagebox-modal-header">
-              <h2>编辑备注</h2>
+              <h2>{t.manager.editNotesTitle}</h2>
               <button
                 type="button"
                 className="pagebox-modal-close"
                 onClick={() => setNotesTarget(null)}
-                title="关闭"
+                title={t.license.close}
               >
                 <CloseIcon size={14} />
               </button>
@@ -1159,14 +1196,14 @@ export function ManagerApp() {
               autoFocus
               value={notesDraft}
               onChange={(e) => setNotesDraft(e.target.value)}
-              placeholder="添加备注…"
+              placeholder={t.manager.addNotesPlaceholder}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                   e.preventDefault();
                   void (async () => {
                     await pageBoxService.updateTabNotes(notesTarget.id, notesDraft);
                     setNotesTarget(null);
-                    showStatus("备注已保存");
+                    showStatus(t.manager.notesSaved);
                     await refresh();
                   })();
                 }
@@ -1175,18 +1212,18 @@ export function ManagerApp() {
             />
             <div className="pagebox-modal__actions">
               <button className="pagebox-btn" onClick={() => setNotesTarget(null)}>
-                取消
+                {t.manager.cancelBtn}
               </button>
               <button
                 className="pagebox-btn pagebox-btn--primary"
                 onClick={async () => {
                   await pageBoxService.updateTabNotes(notesTarget.id, notesDraft);
                   setNotesTarget(null);
-                  showStatus("备注已保存");
+                  showStatus(t.manager.notesSaved);
                   await refresh();
                 }}
               >
-                保存
+                {t.manager.saveBtn}
               </button>
             </div>
           </div>
@@ -1198,6 +1235,16 @@ export function ManagerApp() {
         onClose={() => setLicenseModalOpen(false)}
       />
     </div>
+  );
+}
+
+export function ManagerApp() {
+  return (
+    <ThemeProvider>
+      <I18nProvider>
+        <ManagerAppInner />
+      </I18nProvider>
+    </ThemeProvider>
   );
 }
 

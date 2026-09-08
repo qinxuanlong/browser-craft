@@ -18,6 +18,22 @@
   --sidebar-width: 250px;
 }
 
+:root[data-theme="dark"],
+.treereader-root.theme-dark {
+  --bg-primary: #0d1117;
+  --bg-sidebar: #161b22;
+  --bg-hover: #21262d;
+  --bg-active: rgba(16, 185, 129, 0.2);
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  --border-color: #30363d;
+  --accent-color: #10b981;
+  --accent-bg: rgba(16, 185, 129, 0.18);
+  --accent-dark: #34d399;
+  --code-bg: #161b22;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -306,7 +322,7 @@ body, html {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background-color: #ffffff;
+  background-color: var(--bg-primary);
   position: relative;
 }
 
@@ -319,7 +335,7 @@ body, html {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  background-color: #ffffff;
+  background-color: var(--bg-primary);
   user-select: none;
 }
 
@@ -636,7 +652,7 @@ body, html {
   width: 100%;
   height: 100%;
   overflow: auto;
-  background-color: #ffffff;
+  background-color: var(--bg-primary);
   position: relative;
   font-family: "JetBrains Mono", "Fira Code", Consolas, Menlo, monospace;
 }
@@ -646,12 +662,12 @@ body, html {
   top: 10px;
   right: 18px;
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-weight: 700;
-  background: rgba(241, 245, 249, 0.8);
+  background: var(--bg-hover);
   padding: 2px 6px;
   border-radius: 4px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-color);
   user-select: none;
   z-index: 2;
 }
@@ -670,10 +686,10 @@ body, html {
   flex-direction: column;
   padding: 0 12px 0 16px;
   text-align: right;
-  color: #94a3b8;
+  color: var(--text-muted);
   user-select: none;
   border-right: 1px solid var(--border-color);
-  background-color: #fafafa;
+  background-color: var(--bg-sidebar);
   min-width: 48px;
 }
 
@@ -732,8 +748,9 @@ body, html {
 .toc-drawer-panel {
   width: 280px;
   height: 100%;
-  background-color: #ffffff;
-  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.08);
+  background-color: var(--bg-sidebar);
+  border-left: 1px solid var(--border-color);
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
 }
@@ -957,6 +974,46 @@ body, html {
   color: #94a3b8;
 }
 
+.file-scheme-permission-banner {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: #166534;
+  text-align: left;
+  max-width: 480px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.file-scheme-permission-banner .permission-text {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.file-scheme-permission-banner .copy-scheme-url-btn {
+  background-color: #16a34a;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+}
+
+.file-scheme-permission-banner .copy-scheme-url-btn:hover {
+  background-color: #15803d;
+}
+
 .welcome-features-grid {
   display: flex;
   flex-direction: column;
@@ -1013,7 +1070,7 @@ body, html {
   height: 100%;
   display: flex;
   overflow: hidden;
-  background-color: #ffffff;
+  background-color: var(--bg-primary);
 }
 
 .editor-wrapper {
@@ -1026,7 +1083,7 @@ body, html {
 .editor-line-numbers {
   min-width: 48px;
   max-width: 48px;
-  background-color: #f8fafc;
+  background-color: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   padding: 16px 8px;
   text-align: right;
@@ -1142,5 +1199,230 @@ body, html {
   background-color: var(--accent-bg);
   color: var(--accent-dark);
   border-color: var(--accent-color);
+}
+
+/* ==========================================================================
+   暗黑护眼主题 (Dark Mode) 深度适配规则
+   ========================================================================== */
+
+/* 顶栏控制按钮暗色适配 */
+.theme-dark .tool-btn {
+  background: #161b22;
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+.theme-dark .tool-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: #484f58;
+}
+
+.theme-dark .tool-btn.active {
+  background: var(--accent-color);
+  color: #ffffff;
+  border-color: var(--accent-color);
+}
+
+.theme-dark .theme-toggle-btn {
+  color: #f1c40f;
+}
+
+.theme-dark .theme-toggle-btn:hover {
+  color: #f39c12;
+  background: var(--bg-hover);
+}
+
+.theme-dark .mode-select-dropdown {
+  background-color: #161b22;
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.theme-dark .font-size-adjuster {
+  border-color: var(--border-color);
+}
+
+.theme-dark .font-size-indicator {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* 语法高亮 Token 暗色着色 (VSCode/GitHub Dark 标准) */
+.theme-dark .token-keyword { color: #ff7b72; font-weight: 600; }
+.theme-dark .token-string { color: #a5d6ff; }
+.theme-dark .token-comment { color: #8b949e; font-style: italic; }
+.theme-dark .token-number { color: #79c0ff; }
+.theme-dark .token-function { color: #d2a8ff; font-weight: 500; }
+
+/* Markdown 与正文阅读暗色适配 */
+.theme-dark .reader-heading {
+  color: #f0f6fc;
+}
+
+.theme-dark .reader-h1 {
+  border-bottom-color: var(--border-color);
+}
+
+.theme-dark .reader-h2 {
+  border-bottom-color: var(--border-color);
+}
+
+.theme-dark .markdown-viewer-body {
+  color: #c9d1d9;
+}
+
+.theme-dark .markdown-viewer-body thead {
+  background-color: #161b22;
+}
+
+.theme-dark .markdown-viewer-body th {
+  color: #f0f6fc;
+  border-color: var(--border-color);
+}
+
+.theme-dark .markdown-viewer-body td {
+  border-color: var(--border-color);
+}
+
+.theme-dark .markdown-viewer-body tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.theme-dark .markdown-viewer-body tr:hover {
+  background-color: #21262d;
+}
+
+.theme-dark .markdown-viewer-body blockquote,
+.theme-dark .reader-quote {
+  background-color: #161b22;
+  color: #8b949e;
+  border-left-color: var(--accent-color);
+}
+
+.theme-dark .markdown-viewer-body code {
+  background-color: #161b22;
+  color: #79c0ff;
+  border: 1px solid var(--border-color);
+}
+
+/* 侧边栏与表单暗色适配 */
+.theme-dark .sidebar-search-bar {
+  background-color: var(--bg-sidebar);
+}
+
+.theme-dark .sidebar-search-input {
+  background-color: #0d1117;
+  color: #e6edf3;
+  border-color: var(--border-color);
+}
+
+.theme-dark .sidebar-search-input:focus {
+  border-color: var(--accent-color);
+}
+
+.theme-dark .sidebar-filter-selector {
+  background-color: var(--bg-sidebar);
+}
+
+.theme-dark .filter-chip {
+  background-color: #21262d;
+  color: #8b949e;
+  border-color: var(--border-color);
+}
+
+.theme-dark .filter-chip:hover {
+  color: #e6edf3;
+  background-color: #30363d;
+}
+
+.theme-dark .filter-chip.active {
+  background-color: var(--accent-color);
+  color: #ffffff;
+  border-color: var(--accent-color);
+}
+
+.theme-dark .project-footer-container {
+  background-color: var(--bg-sidebar);
+}
+
+.theme-dark .footer-btn {
+  background: #21262d;
+  color: #c9d1d9;
+  border-color: var(--border-color);
+}
+
+.theme-dark .footer-btn:hover {
+  background: #30363d;
+  color: #ffffff;
+}
+
+.theme-dark .header-icon-btn.active {
+  background-color: #21262d;
+  color: #f0f6fc;
+}
+
+/* 欢迎页暗色适配 */
+.theme-dark .main-welcome-screen {
+  background-color: #0d1117;
+}
+
+.theme-dark .welcome-card {
+  background: #161b22;
+  border-color: #30363d;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+}
+
+.theme-dark .welcome-title {
+  color: #f0f6fc;
+}
+
+.theme-dark .welcome-subtitle {
+  color: #8b949e;
+}
+
+.theme-dark .feature-item {
+  background-color: #21262d;
+}
+
+.theme-dark .feature-text strong {
+  color: #f0f6fc;
+}
+
+.theme-dark .feature-text span {
+  color: #8b949e;
+}
+
+/* 状态徽章暗色适配 */
+.theme-dark .save-status-badge.dirty {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+.theme-dark .save-status-badge.saved {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.theme-dark .save-status-badge.external-sync {
+  background-color: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+}
+
+.theme-dark .save-action-btn.highlight {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.theme-dark .lang-toggle-btn {
+  color: #8b949e;
+  border-color: var(--border-color);
+}
+
+.theme-dark .lang-toggle-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-color);
 }
 

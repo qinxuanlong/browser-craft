@@ -9,15 +9,20 @@ import {
   CrownIcon,
   ExternalLinkIcon,
   ExportIcon,
+  GlobeIcon,
   ImportIcon,
+  MoonIcon,
   PageBoxLogo,
   SidebarIcon,
+  SunIcon,
   UnfoldLessIcon,
   UnfoldMoreIcon,
   WindowSaveIcon,
 } from "./icons";
 import { LicenseModal } from "./LicenseModal";
 import { useLicense } from "./useLicense";
+import { I18nProvider, useTranslation } from "./i18n";
+import { ThemeProvider, useTheme } from "./ThemeContext";
 import "./styles.css";
 
 export type AppVariant = "popup" | "sidepanel";
@@ -26,7 +31,9 @@ interface PageBoxAppProps {
   variant?: AppVariant;
 }
 
-export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
+function PageBoxAppInner({ variant = "popup" }: PageBoxAppProps) {
+  const { toggleLocale, t } = useTranslation();
+  const { resolvedTheme, toggleTheme } = useTheme();
   const [query, setQuery] = useState("");
   const [tabs, setTabs] = useState<SavedTab[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -66,7 +73,7 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
       showStatus(successMsg);
       await refresh();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "操作失败";
+      const message = error instanceof Error ? error.message : "Error";
       showStatus(message);
     }
   };
@@ -74,32 +81,32 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
   const handleSaveTab = () =>
     runAction(async () => {
       await pageBoxService.saveCurrentTab();
-    }, "已收藏当前标签页");
+    }, t.popup.saveTabSuccess);
 
   const handleSaveWindow = () =>
     runAction(async () => {
       await pageBoxService.saveCurrentWindow();
-    }, "已收藏当前窗口");
+    }, t.popup.saveWindowSuccess);
 
   const handleRestoreTab = async (tab: SavedTab) => {
     await pageBoxService.restoreTab(tab.id);
-    showStatus("已打开标签页");
+    showStatus(t.manager.openedTab);
   };
 
   const handleRestoreWindow = async (win: SavedWindow) => {
     await pageBoxService.restoreWindow(win.id);
-    showStatus(`已恢复 ${win.tabs.length} 个标签页`);
+    showStatus(t.manager.restoredTabs(win.tabs.length));
   };
 
   const handleDeleteTab = async (tab: SavedTab) => {
     await pageBoxService.deleteTab(tab.id);
-    showStatus("已删除");
+    showStatus(t.manager.deleted);
     await refresh();
   };
 
   const handleDeleteWindow = async (win: SavedWindow) => {
     await pageBoxService.deleteWindow(win.id);
-    showStatus("已删除");
+    showStatus(t.manager.deleted);
     await refresh();
   };
 
@@ -112,7 +119,7 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
     a.download = `pagebox-export-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showStatus("导出完成");
+    showStatus(t.popup.exportSuccess);
   };
 
   const handleImport = async () => {
@@ -126,10 +133,10 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
         const text = await file.text();
         const data = JSON.parse(text);
         await pageBoxService.importData(data, true);
-        showStatus("导入完成");
+        showStatus(t.popup.importSuccess);
         await refresh();
       } catch {
-        showStatus("导入失败，请检查 JSON 文件");
+        showStatus(t.popup.importFailed);
       }
     };
     input.click();
@@ -144,7 +151,7 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
     if (!notesTarget) return;
     await pageBoxService.updateTabNotes(notesTarget.id, notesDraft);
     setNotesTarget(null);
-    showStatus("备注已保存");
+    showStatus(t.manager.notesSaved);
     await refresh();
   };
 
@@ -166,20 +173,20 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
               type="button"
               className="pagebox-pro-badge pagebox-pro-badge--active"
               onClick={() => setLicenseModalOpen(true)}
-              title="Pro 尊享特权生效中，点击查看授权"
+              title={t.header.proActiveTitle}
             >
               <CrownIcon size={11} />
-              <span>PRO</span>
+              <span>{t.header.proBadge}</span>
             </button>
           ) : (
             <button
               type="button"
               className="pagebox-pro-badge pagebox-pro-badge--upgrade"
               onClick={() => setLicenseModalOpen(true)}
-              title="升级 Pro 解锁高级特权"
+              title={t.header.upgradeProTitle}
             >
               <CrownIcon size={11} />
-              <span>Pro</span>
+              <span>{t.header.upgradePro}</span>
             </button>
           )}
         </div>
@@ -189,27 +196,27 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
             type="button"
             className="pagebox-header-btn pagebox-header-btn--primary"
             onClick={handleSaveTab}
-            title="收藏当前标签页"
-            aria-label="收藏当前标签页"
+            title={t.header.saveTabTitle}
+            aria-label={t.header.saveTabTitle}
           >
-            <BookmarkPlusIcon size={15} />
+            <BookmarkPlusIcon size={14} />
           </button>
           <button
             type="button"
             className="pagebox-header-btn"
             onClick={handleSaveWindow}
-            title="收藏当前窗口所有标签"
-            aria-label="收藏当前窗口所有标签"
+            title={t.header.saveWindowTitle}
+            aria-label={t.header.saveWindowTitle}
           >
-            <WindowSaveIcon size={15} />
+            <WindowSaveIcon size={14} />
           </button>
           <div className="pagebox-header__divider" />
           <button
             type="button"
             className="pagebox-header-btn"
             onClick={handleExport}
-            title="导出数据备份 (JSON)"
-            aria-label="导出数据备份"
+            title={t.header.exportBackupTitle}
+            aria-label={t.header.exportBackupTitle}
           >
             <ExportIcon size={14} />
           </button>
@@ -217,18 +224,36 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
             type="button"
             className="pagebox-header-btn"
             onClick={handleImport}
-            title="导入数据备份 (JSON)"
-            aria-label="导入数据备份"
+            title={t.header.importBackupTitle}
+            aria-label={t.header.importBackupTitle}
           >
             <ImportIcon size={14} />
+          </button>
+          <button
+            type="button"
+            className="pagebox-header-btn"
+            onClick={toggleLocale}
+            title={t.header.switchLangTitle}
+            aria-label={t.header.switchLangTitle}
+          >
+            <GlobeIcon size={14} />
+          </button>
+          <button
+            type="button"
+            className="pagebox-header-btn"
+            onClick={toggleTheme}
+            title={resolvedTheme === "dark" ? t.settings.themeLight : t.settings.themeDark}
+            aria-label={resolvedTheme === "dark" ? t.settings.themeLight : t.settings.themeDark}
+          >
+            {resolvedTheme === "dark" ? <SunIcon size={14} /> : <MoonIcon size={14} />}
           </button>
           <div className="pagebox-header__divider" />
           <button
             type="button"
             className="pagebox-header-btn pagebox-header-btn--highlight"
             onClick={() => void openManagerPage()}
-            title="在新标签页中打开管理中心"
-            aria-label="在新标签页中打开管理中心"
+            title={t.header.openManagerTitle}
+            aria-label={t.header.openManagerTitle}
           >
             <ExternalLinkIcon size={14} />
           </button>
@@ -243,8 +268,8 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
                   }
                 });
               }}
-              title="在浏览器侧边栏中打开"
-              aria-label="在浏览器侧边栏中打开"
+              title={t.header.openSidepanelTitle}
+              aria-label={t.header.openSidepanelTitle}
             >
               <SidebarIcon size={14} />
             </button>
@@ -255,7 +280,7 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
       <div className="pagebox-search">
         <input
           type="search"
-          placeholder="搜索标题、URL、备注、标签…"
+          placeholder={t.search.popupPlaceholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -264,26 +289,26 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
       <main className="pagebox-content">
         {isEmpty && (
           <div className="pagebox-empty">
-            <p>浏览器书签为空</p>
-            <p>切换到普通网页后，点击「收藏标签」直接保存至浏览器书签</p>
+            <p>{t.popup.emptyTitle}</p>
+            <p>{t.popup.emptyDesc}</p>
             <p className="pagebox-empty__hint">
-              与浏览器书签实时双向联动，修改即生效
+              {t.popup.emptyHint}
             </p>
           </div>
         )}
 
         {isSearching && windows.length > 0 && (
           <>
-            <div className="pagebox-section-title">窗口 ({windows.length})</div>
+            <div className="pagebox-section-title">{t.popup.windowsSection(windows.length)}</div>
             {windows.map((win) => (
               <div key={win.id} className="pagebox-item" onClick={() => handleRestoreWindow(win)}>
                 <div className="pagebox-item__body">
                   <div className="pagebox-item__title">{win.name}</div>
-                  <div className="pagebox-item__url">{win.tabs.length} 个标签页</div>
+                  <div className="pagebox-item__url">{t.tree.tabsCount(win.tabs.length)}</div>
                   {win.notes && <div className="pagebox-item__notes">{win.notes}</div>}
                 </div>
                 <div className="pagebox-item__actions" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => handleDeleteWindow(win)}>删除</button>
+                  <button onClick={() => handleDeleteWindow(win)}>{t.common.delete}</button>
                 </div>
               </div>
             ))}
@@ -294,7 +319,7 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
           <>
             <div className="pagebox-section-header">
               <div className="pagebox-section-title">
-                {isSearching ? `搜索结果 (${tabs.length})` : `收藏目录树 (${tabs.length})`}
+                {isSearching ? t.search.results(tabs.length) : t.search.treeTitle(tabs.length)}
               </div>
               {!isSearching && (
                 <div className="pagebox-tree-header-actions">
@@ -302,8 +327,8 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
                     type="button"
                     className="pagebox-tree-tool-btn"
                     onClick={() => treeRef.current?.expandAll()}
-                    title="全部展开"
-                    aria-label="全部展开"
+                    title={t.sidebar.expandAll}
+                    aria-label={t.sidebar.expandAll}
                   >
                     <UnfoldMoreIcon size={14} />
                   </button>
@@ -311,8 +336,8 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
                     type="button"
                     className="pagebox-tree-tool-btn"
                     onClick={() => treeRef.current?.collapseAll()}
-                    title="全部收起"
-                    aria-label="全部收起"
+                    title={t.sidebar.collapseAll}
+                    aria-label={t.sidebar.collapseAll}
                   >
                     <UnfoldLessIcon size={14} />
                   </button>
@@ -334,8 +359,8 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
                     {tab.notes && <div className="pagebox-item__notes">{tab.notes}</div>}
                   </div>
                   <div className="pagebox-item__actions" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => openNotes(tab)}>备注</button>
-                    <button onClick={() => handleDeleteTab(tab)}>删除</button>
+                    <button onClick={() => openNotes(tab)}>{t.common.notes}</button>
+                    <button onClick={() => handleDeleteTab(tab)}>{t.common.delete}</button>
                   </div>
                 </div>
               ))
@@ -363,12 +388,12 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
         <div className="pagebox-modal-backdrop" onClick={() => setNotesTarget(null)}>
           <div className="pagebox-modal" onClick={(e) => e.stopPropagation()}>
             <div className="pagebox-modal-header">
-              <h2>编辑备注</h2>
+              <h2>{t.manager.editNotesTitle}</h2>
               <button
                 type="button"
                 className="pagebox-modal-close"
                 onClick={() => setNotesTarget(null)}
-                title="关闭"
+                title={t.license.close}
               >
                 <CloseIcon size={14} />
               </button>
@@ -377,7 +402,7 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
               autoFocus
               value={notesDraft}
               onChange={(e) => setNotesDraft(e.target.value)}
-              placeholder="添加备注…"
+              placeholder={t.manager.addNotesPlaceholder}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                   e.preventDefault();
@@ -388,10 +413,10 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
             />
             <div className="pagebox-modal__actions">
               <button className="pagebox-btn" onClick={() => setNotesTarget(null)}>
-                取消
+                {t.common.cancel}
               </button>
               <button className="pagebox-btn pagebox-btn--primary" onClick={saveNotes}>
-                保存
+                {t.common.save}
               </button>
             </div>
           </div>
@@ -403,6 +428,16 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
         onClose={() => setLicenseModalOpen(false)}
       />
     </div>
+  );
+}
+
+export function PageBoxApp(props: PageBoxAppProps) {
+  return (
+    <ThemeProvider>
+      <I18nProvider>
+        <PageBoxAppInner {...props} />
+      </I18nProvider>
+    </ThemeProvider>
   );
 }
 

@@ -98,8 +98,11 @@ export async function buildDirectoryFromHandle(
  * 基于标准 HTML5 input webkitdirectory 的目录树构建（降级兼容方案）
  */
 export function buildDirectoryFromFileList(files: FileList): FileItem {
+  const isSingleFile = files.length === 1 && !files[0].webkitRelativePath;
   const rootName = files[0]?.webkitRelativePath
     ? files[0].webkitRelativePath.split("/")[0]
+    : isSingleFile
+    ? files[0].name
     : "本地目录";
 
   const rootProject: FileItem = {
@@ -159,6 +162,71 @@ export function buildDirectoryFromFileList(files: FileList): FileItem {
   }
 
   return rootProject;
+}
+
+/**
+ * 基于单个 FileSystemFileHandle 构建单文件项目（支持原生读写与外部感知）
+ */
+export async function buildSingleFileProjectFromHandle(
+  fileHandle: FileSystemFileHandle
+): Promise<FileItem> {
+  const file = await fileHandle.getFile();
+  const { category, language } = classifyFile(file.name);
+
+  const fileItem: FileItem = {
+    id: `file-single-${Date.now()}`,
+    name: file.name,
+    path: `/${file.name}`,
+    type: "file",
+    extension: file.name.split(".").pop() || "",
+    category,
+    language,
+    size: file.size,
+    lastModified: file.lastModified,
+    fileHandle,
+  };
+
+  return {
+    id: `dir-single-${Date.now()}`,
+    name: file.name,
+    path: `/${file.name}`,
+    type: "directory",
+    children: [fileItem],
+  };
+}
+
+/**
+ * 基于内存/缓存文本数据构建单文件项目（用于从 file:/// Content Script 传递来的文本）
+ */
+export function buildSingleFileProjectFromData(data: {
+  id?: string;
+  name: string;
+  path?: string;
+  content: string;
+  size?: number;
+  lastModified?: number;
+}): FileItem {
+  const classification = classifyFile(data.name);
+  const fileItem: FileItem = {
+    id: data.id || `file-local-${Date.now()}`,
+    name: data.name,
+    path: data.path || `/${data.name}`,
+    type: "file",
+    extension: data.name.split(".").pop() || "",
+    category: classification.category,
+    language: classification.language,
+    content: data.content,
+    size: data.size ?? data.content.length,
+    lastModified: data.lastModified ?? Date.now(),
+  };
+
+  return {
+    id: `dir-single-${Date.now()}`,
+    name: data.name,
+    path: data.path || `/${data.name}`,
+    type: "directory",
+    children: [fileItem],
+  };
 }
 
 /**

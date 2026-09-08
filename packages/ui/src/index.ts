@@ -10,4 +10,7 @@ export type { LicenseModalProps } from "./LicenseModal";
 export * from "./Favicon";
 export { StatisticsDashboard } from "./StatisticsDashboard";
 export type { StatisticsDashboardProps } from "./StatisticsDashboard";
-
+export { SettingsView } from "./SettingsView";
+export type { SettingsViewProps } from "./SettingsView";
+export * from "./i18n";
+export * from "./ThemeContext";

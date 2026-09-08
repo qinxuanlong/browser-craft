@@ -1,12 +1,14 @@
-import React, { useMemo, useState } from "react";
-import type { Folder, Id, SavedTab, DeadLinkResult } from "@pagebox/types";
+import React, { useEffect, useMemo, useState } from "react";
+import type { Folder, Id, SavedTab, DeadLinkResult, HistoryVisitStats } from "@pagebox/types";
 import { checkDeadLinks, findEmptyFolders, pageBoxService } from "@pagebox/core";
+import { useTranslation } from "./i18n";
 import { TabFavicon } from "./Favicon";
 import {
   ActivityIcon,
   AlertTriangleIcon,
   ChartBarIcon,
   CheckCircleIcon,
+  CloseIcon,
   ExternalLinkIcon,
   FireIcon,
   FolderYellowIcon,
@@ -25,6 +27,24 @@ export interface StatisticsDashboardProps {
   showStatus: (msg: string) => void;
 }
 
+export interface TabWithActivity extends SavedTab {
+  pluginVisitCount: number;
+  historyVisitCount: number;
+  combinedVisitCount: number;
+  effectiveLastVisitedAt?: number;
+}
+
+export interface ConfirmModalState {
+  title: string;
+  message: string;
+  warning?: string;
+  count?: number;
+  items?: { id: string; title: string; subtitle?: string; badge?: string }[];
+  confirmText?: string;
+  isDanger?: boolean;
+  onConfirm: () => Promise<void> | void;
+}
+
 type SubTab = "health" | "structure" | "activity";
 
 export function StatisticsDashboard({
@@ -35,12 +55,22 @@ export function StatisticsDashboard({
   onSearchFilter,
   showStatus,
 }: StatisticsDashboardProps) {
+  const { t } = useTranslation();
   const [activeSubTab, setActiveSubTab] = useState<SubTab>("health");
 
   // 死链体检状态
   const [isCheckingDeadLinks, setIsCheckingDeadLinks] = useState(false);
   const [deadLinkProgress, setDeadLinkProgress] = useState<{ checked: number; total: number } | null>(null);
   const [deadLinks, setDeadLinks] = useState<DeadLinkResult[] | null>(null);
+
+  // 历史记录辅助统计状态
+  const [historyMap, setHistoryMap] = useState<Record<string, HistoryVisitStats>>({});
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [enableHistoryAux, setEnableHistoryAux] = useState(true);
+
+  // 批量操作二次确认弹窗状态
+  const [confirmModal, setConfirmModal] = useState<ConfirmModalState | null>(null);
+  const [isConfirmProcessing, setIsConfirmProcessing] = useState(false);
 
   // 1. 健康度治理计算：重复项
   const duplicatesGroup = useMemo(() => {
@@ -176,23 +206,87 @@ export function StatisticsDashboard({
     return { items, maxCount };
   }, [tabs]);
 
-  // 8. 活跃度：常读书签 Top 10
-  const topVisitedTabs = useMemo(() => {
-    return [...tabs]
-      .filter((t) => (t.visitCount ?? 0) > 0)
-      .sort((a, b) => (b.visitCount ?? 0) - (a.visitCount ?? 0))
-      .slice(0, 10);
-  }, [tabs]);
+  // 拉取浏览器历史记录访问统计
+  const fetchHistoryStats = async () => {
+    if (tabs.length === 0) return;
+    setIsLoadingHistory(true);
+    try {
+      const urls = tabs.map((t) => t.url);
+      const stats = await pageBoxService.getHistoryStats(urls);
+      setHistoryMap(stats);
+    } catch (err) {
+      console.error("加载浏览器历史记录统计失败:", err);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
 
-  // 9. 活跃度：沉睡/僵尸书签（加入超过 90 天且从未在 PageBox 中打开过）
-  const staleBookmarks = useMemo(() => {
-    const ninetyDaysAgo = Date.now() - 90 * 24 * 3600 * 1000;
-    return tabs.filter((t) => {
-      const isOld = t.createdAt < ninetyDaysAgo;
-      const isUnvisited = (t.visitCount ?? 0) === 0;
-      return isOld && isUnvisited;
+  // 切换到“活跃度”标签时，若开启了历史辅助且尚未拉取，自动拉取历史统计
+  useEffect(() => {
+    if (
+      activeSubTab === "activity" &&
+      enableHistoryAux &&
+      Object.keys(historyMap).length === 0 &&
+      !isLoadingHistory &&
+      tabs.length > 0
+    ) {
+      void fetchHistoryStats();
+    }
+  }, [activeSubTab, enableHistoryAux, tabs.length]);
+
+  // 综合计算插件内打开与历史记录访问统计
+  const tabsWithActivity = useMemo<TabWithActivity[]>(() => {
+    return tabs.map((t) => {
+      const pluginVisitCount = t.visitCount ?? 0;
+      const historyStat = historyMap[t.url];
+      const historyVisitCount = enableHistoryAux && historyStat ? (historyStat.visitCount ?? 0) : 0;
+      const combinedVisitCount = pluginVisitCount + historyVisitCount;
+      const historyLastVisit = enableHistoryAux && historyStat ? historyStat.lastVisitTime : undefined;
+      const effectiveLastVisitedAt = Math.max(t.lastVisitedAt ?? 0, historyLastVisit ?? 0) || undefined;
+      return {
+        ...t,
+        pluginVisitCount,
+        historyVisitCount,
+        combinedVisitCount,
+        effectiveLastVisitedAt,
+      };
     });
-  }, [tabs]);
+  }, [tabs, historyMap, enableHistoryAux]);
+
+  // 8. 活跃度：常读书签 Top 10（根据综合总访问频次降序）
+  const topVisitedTabs = useMemo(() => {
+    return [...tabsWithActivity]
+      .filter((t) => t.combinedVisitCount > 0)
+      .sort((a, b) => b.combinedVisitCount - a.combinedVisitCount)
+      .slice(0, 10);
+  }, [tabsWithActivity]);
+
+  // 9. 活跃度：沉睡/僵尸书签（加入超90天且插件内未打开，若开启辅助且近90天有历史记录访问则自动唤醒排除）
+  const { staleBookmarks, awakenedCount } = useMemo(() => {
+    const ninetyDaysAgo = Date.now() - 90 * 24 * 3600 * 1000;
+    let awakened = 0;
+    const staleList: TabWithActivity[] = [];
+
+    for (const t of tabsWithActivity) {
+      const isOld = t.createdAt < ninetyDaysAgo;
+      const isUnvisitedInPlugin = t.pluginVisitCount === 0;
+      if (isOld && isUnvisitedInPlugin) {
+        // 如果开启历史辅助，且在历史记录中有 90 天内的访问
+        const hasRecentBrowserVisit =
+          enableHistoryAux &&
+          t.effectiveLastVisitedAt !== undefined &&
+          t.effectiveLastVisitedAt >= ninetyDaysAgo;
+
+        if (hasRecentBrowserVisit) {
+          awakened++;
+        } else {
+          staleList.push(t);
+        }
+      }
+    }
+
+    return { staleBookmarks: staleList, awakenedCount: awakened };
+  }, [tabsWithActivity, enableHistoryAux]);
 
   // 一键死链体检
   const handleStartDeadLinkCheck = async () => {
@@ -205,76 +299,122 @@ export function StatisticsDashboard({
       setDeadLinks(results);
       showStatus(
         results.length > 0
-          ? `体检完成：检测到 ${results.length} 个失效链接`
-          : "体检完成：全库链接均可正常访问！"
+          ? t.statistics.deadLinksFound(results.length)
+          : t.statistics.allLinksHealthy
       );
     } catch {
-      showStatus("死链体检出现异常，请稍后重试");
+      showStatus(t.statistics.scanError);
     } finally {
       setIsCheckingDeadLinks(false);
     }
   };
 
-  // 一键清理全部死链
-  const handleCleanAllDeadLinks = async () => {
+  // 一键清理全部死链（触发二次确认弹窗）
+  const handleCleanAllDeadLinks = () => {
     if (!deadLinks || deadLinks.length === 0) return;
-    const confirm = window.confirm(`确定要批量删除检测出的 ${deadLinks.length} 个失效死链吗？此操作不可恢复。`);
-    if (!confirm) return;
-
-    await pageBoxService.batchDeleteTabs(deadLinks.map((d) => d.tabId));
-    setDeadLinks([]);
-    showStatus("已成功清理失效死链");
-    await onRefresh();
+    setConfirmModal({
+      title: t.statistics.cleanDeadLinksModalTitle,
+      message: t.statistics.cleanDeadLinksConfirm(deadLinks.length),
+      warning: t.statistics.irreversableWarning,
+      count: deadLinks.length,
+      items: deadLinks.map((d) => ({
+        id: d.tabId,
+        title: d.title || d.url,
+        subtitle: d.url,
+        badge: d.status ? `HTTP ${d.status}` : d.error || t.statistics.deadLinkUnreachable,
+      })),
+      confirmText: t.statistics.confirmCleanBtn,
+      isDanger: true,
+      onConfirm: async () => {
+        await pageBoxService.batchDeleteTabs(deadLinks.map((d) => d.tabId));
+        setDeadLinks([]);
+        showStatus(t.statistics.cleanDeadLinksSuccess);
+        await onRefresh();
+      },
+    });
   };
 
-  // 一键清理所有重复项（每组只保留最早添加的一个）
-  const handleCleanAllDuplicates = async () => {
+  // 一键清理所有重复项（每组只保留最早添加的一个，触发二次确认弹窗）
+  const handleCleanAllDuplicates = () => {
     if (totalDuplicateCount === 0) {
-      showStatus("当前没有重复链接需要清理");
+      showStatus(t.statistics.noDuplicates);
       return;
     }
-    const confirm = window.confirm(`共检测到 ${totalDuplicateCount} 个多余的重复链接，是否保留首个并删除其余重复项？`);
-    if (!confirm) return;
-
-    const toDeleteIds: Id[] = [];
+    const toDeleteTabs: SavedTab[] = [];
     for (const group of duplicatesGroup) {
       // 保留最早添加的一项，删除其余
       const sorted = [...group.items].sort((a, b) => a.createdAt - b.createdAt);
       for (let i = 1; i < sorted.length; i++) {
-        toDeleteIds.push(sorted[i].id);
+        toDeleteTabs.push(sorted[i]);
       }
     }
 
-    await pageBoxService.batchDeleteTabs(toDeleteIds);
-    showStatus(`已清理 ${toDeleteIds.length} 个重复书签`);
-    await onRefresh();
+    setConfirmModal({
+      title: t.statistics.cleanDuplicatesModalTitle,
+      message: t.statistics.cleanDuplicatesConfirm(totalDuplicateCount),
+      warning: t.statistics.irreversableWarning,
+      count: toDeleteTabs.length,
+      items: toDeleteTabs.map((tab) => ({
+        id: tab.id,
+        title: tab.title || tab.url,
+        subtitle: tab.url,
+      })),
+      confirmText: t.statistics.confirmCleanBtn,
+      isDanger: true,
+      onConfirm: async () => {
+        await pageBoxService.batchDeleteTabs(toDeleteTabs.map((t) => t.id));
+        showStatus(t.statistics.cleanDuplicatesSuccess(toDeleteTabs.length));
+        await onRefresh();
+      },
+    });
   };
 
-  // 一键清理所有空文件夹
-  const handleCleanAllEmptyFolders = async () => {
+  // 一键清理所有空文件夹（触发二次确认弹窗）
+  const handleCleanAllEmptyFolders = () => {
     if (emptyFolders.length === 0) {
-      showStatus("未检测到空文件夹");
+      showStatus(t.statistics.noEmptyFolders);
       return;
     }
-    const confirm = window.confirm(`检测到 ${emptyFolders.length} 个空文件夹，是否批量删除？`);
-    if (!confirm) return;
-
-    await pageBoxService.batchDeleteFolders(emptyFolders.map((f) => f.id));
-    showStatus(`已清理 ${emptyFolders.length} 个空文件夹`);
-    await onRefresh();
+    setConfirmModal({
+      title: t.statistics.cleanEmptyFoldersModalTitle,
+      message: t.statistics.cleanEmptyFoldersConfirm(emptyFolders.length),
+      warning: t.statistics.irreversableWarning,
+      count: emptyFolders.length,
+      items: emptyFolders.map((f) => ({
+        id: f.id,
+        title: f.name,
+      })),
+      confirmText: t.statistics.confirmCleanBtn,
+      isDanger: true,
+      onConfirm: async () => {
+        await pageBoxService.batchDeleteFolders(emptyFolders.map((f) => f.id));
+        showStatus(t.statistics.cleanEmptyFoldersSuccess(emptyFolders.length));
+        await onRefresh();
+      },
+    });
   };
 
-  // 批量断舍离沉睡书签
-  const handleCleanStaleBookmarks = async () => {
+  // 批量断舍离沉睡书签（触发二次确认弹窗）
+  const handleCleanStaleBookmarks = () => {
     if (staleBookmarks.length === 0) return;
-    const confirm = window.confirm(
-      `确定要将 ${staleBookmarks.length} 个超90天从未打开的书签批量删除吗？请谨慎操作。`
-    );
-    if (!confirm) return;
-
-    await pageBoxService.batchDeleteTabs(staleBookmarks.map((t) => t.id));
-    showStatus(`已批量清理 ${staleBookmarks.length} 个沉睡书签`);
-    await onRefresh();
+    setConfirmModal({
+      title: t.statistics.cleanStaleModalTitle,
+      message: t.statistics.cleanStaleConfirm(staleBookmarks.length),
+      warning: t.statistics.irreversableWarning,
+      count: staleBookmarks.length,
+      items: staleBookmarks.map((t) => ({
+        id: t.id,
+        title: t.title || t.url,
+        subtitle: t.url,
+      })),
+      confirmText: t.statistics.confirmCleanBtn,
+      isDanger: true,
+      onConfirm: async () => {
+        await pageBoxService.batchDeleteTabs(staleBookmarks.map((t) => t.id));
+        showStatus(t.statistics.cleanStaleSuccess(staleBookmarks.length));
+        await onRefresh();
+      },
+    });
   };
 
   // 单项删除书签
@@ -283,28 +423,28 @@ export function StatisticsDashboard({
     if (deadLinks) {
       setDeadLinks(deadLinks.filter((d) => d.tabId !== tabId));
     }
-    showStatus("已删除");
+    showStatus(t.statistics.deletedSuccess);
     await onRefresh();
   };
 
   // 打开书签
   const handleOpenTab = async (tab: SavedTab) => {
     await pageBoxService.restoreTab(tab.id);
-    showStatus("已打开页面");
+    showStatus(t.statistics.pageOpenedSuccess);
     await onRefresh();
   };
 
   // 格式化相对时间
   const formatTimeAgo = (ts?: number) => {
-    if (!ts) return "从未访问";
+    if (!ts) return t.statistics.timeNever;
     const diff = Date.now() - ts;
     const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return "刚刚";
-    if (minutes < 60) return `${minutes}分钟前`;
+    if (minutes < 1) return t.statistics.timeJustNow;
+    if (minutes < 60) return t.statistics.timeMinutesAgo(minutes);
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}小时前`;
+    if (hours < 24) return t.statistics.timeHoursAgo(hours);
     const days = Math.floor(hours / 24);
-    if (days < 30) return `${days}天前`;
+    if (days < 30) return t.statistics.timeDaysAgo(days);
     return new Date(ts).toLocaleDateString();
   };
 
@@ -315,21 +455,21 @@ export function StatisticsDashboard({
         <div className="pagebox-stats__score-card">
           <div className="pagebox-stats__score-circle">
             <span className="pagebox-stats__score-val">{healthScore}</span>
-            <span className="pagebox-stats__score-unit">分</span>
+            <span className="pagebox-stats__score-unit">{t.statistics.scoreUnit}</span>
           </div>
           <div className="pagebox-stats__score-info">
             <div className="pagebox-stats__score-title">
-              书签健康度：
+              {t.statistics.healthScoreTitle}
               {healthScore >= 90 ? (
-                <span className="pagebox-badge pagebox-badge--success">优秀</span>
+                <span className="pagebox-badge pagebox-badge--success">{t.statistics.ratingExcellent}</span>
               ) : healthScore >= 75 ? (
-                <span className="pagebox-badge pagebox-badge--info">良好</span>
+                <span className="pagebox-badge pagebox-badge--info">{t.statistics.ratingGood}</span>
               ) : (
-                <span className="pagebox-badge pagebox-badge--warning">需整理</span>
+                <span className="pagebox-badge pagebox-badge--warning">{t.statistics.ratingNeedsFix}</span>
               )}
             </div>
             <div className="pagebox-stats__score-desc">
-              根据重复链接、死链存活、空目录及未分类占比综合评估
+              {t.statistics.healthScoreDesc}
             </div>
           </div>
         </div>
@@ -337,19 +477,19 @@ export function StatisticsDashboard({
         <div className="pagebox-stats__hero-kpis">
           <div className="pagebox-kpi-item">
             <span className="pagebox-kpi-num">{tabs.length}</span>
-            <span className="pagebox-kpi-label">书签总数</span>
+            <span className="pagebox-kpi-label">{t.statistics.totalTabs}</span>
           </div>
           <div className="pagebox-kpi-item">
             <span className="pagebox-kpi-num">{folders.filter((f) => f.id !== "0").length}</span>
-            <span className="pagebox-kpi-label">文件夹数</span>
+            <span className="pagebox-kpi-label">{t.statistics.totalFolders}</span>
           </div>
           <div className="pagebox-kpi-item">
             <span className="pagebox-kpi-num">{totalDuplicateCount}</span>
-            <span className="pagebox-kpi-label">重复链接</span>
+            <span className="pagebox-kpi-label">{t.statistics.duplicateLinks}</span>
           </div>
           <div className="pagebox-kpi-item">
             <span className="pagebox-kpi-num">{emptyFolders.length}</span>
-            <span className="pagebox-kpi-label">空文件夹</span>
+            <span className="pagebox-kpi-label">{t.statistics.emptyFolders}</span>
           </div>
         </div>
       </div>
@@ -361,7 +501,7 @@ export function StatisticsDashboard({
           onClick={() => setActiveSubTab("health")}
         >
           <ShieldCheckIcon size={16} />
-          <span>健康度与清理治理</span>
+          <span>{t.statistics.tabHealth}</span>
           {(totalDuplicateCount > 0 || (deadLinks && deadLinks.length > 0) || emptyFolders.length > 0) && (
             <span className="pagebox-stats__tab-dot" />
           )}
@@ -372,7 +512,7 @@ export function StatisticsDashboard({
           onClick={() => setActiveSubTab("structure")}
         >
           <ChartBarIcon size={16} />
-          <span>结构分布与可视化</span>
+          <span>{t.statistics.tabStructure}</span>
         </button>
 
         <button
@@ -380,7 +520,7 @@ export function StatisticsDashboard({
           onClick={() => setActiveSubTab("activity")}
         >
           <FireIcon size={16} />
-          <span>活跃度与常读榜</span>
+          <span>{t.statistics.tabActivity}</span>
         </button>
       </div>
 
@@ -392,7 +532,7 @@ export function StatisticsDashboard({
             <div className="pagebox-stats__card-header">
               <div className="pagebox-stats__card-title">
                 <AlertTriangleIcon size={18} className="pagebox-stats__icon-warn" />
-                <span>死链 / 失效网页检测</span>
+                <span>{t.statistics.deadLinkTitle}</span>
               </div>
               <div className="pagebox-stats__card-actions">
                 <button
@@ -401,11 +541,11 @@ export function StatisticsDashboard({
                   disabled={isCheckingDeadLinks}
                 >
                   <RefreshCwIcon size={14} className={isCheckingDeadLinks ? "pagebox-spin" : ""} />
-                  {isCheckingDeadLinks ? "体检探测中…" : "开始全库体检"}
+                  {isCheckingDeadLinks ? t.statistics.scanning : t.statistics.startScan}
                 </button>
                 {deadLinks && deadLinks.length > 0 && (
                   <button className="pagebox-btn pagebox-btn--danger" onClick={handleCleanAllDeadLinks}>
-                    <TrashIcon size={14} /> 一键清理全部死链 ({deadLinks.length})
+                    <TrashIcon size={14} /> {t.statistics.cleanAllDeadLinksWithCount(deadLinks.length)}
                   </button>
                 )}
               </div>
@@ -415,10 +555,13 @@ export function StatisticsDashboard({
             {isCheckingDeadLinks && deadLinkProgress && (
               <div className="pagebox-stats__progress-wrap">
                 <div className="pagebox-stats__progress-info">
-                  <span>正在检测网络可用性…</span>
+                  <span>{t.statistics.detectingNetwork}</span>
                   <span>
-                    {deadLinkProgress.checked} / {deadLinkProgress.total} (
-                    {Math.round((deadLinkProgress.checked / Math.max(deadLinkProgress.total, 1)) * 100)}%)
+                    {t.statistics.progressText(
+                      deadLinkProgress.checked,
+                      deadLinkProgress.total,
+                      Math.round((deadLinkProgress.checked / Math.max(deadLinkProgress.total, 1)) * 100)
+                    )}
                   </span>
                 </div>
                 <div className="pagebox-stats__progress-bar">
@@ -438,7 +581,7 @@ export function StatisticsDashboard({
                 {deadLinks.length === 0 ? (
                   <div className="pagebox-stats__empty-msg is-success">
                     <CheckCircleIcon size={20} />
-                    <span>恭喜！未检测到任何 404 或无法连接的失效死链。</span>
+                    <span>{t.statistics.noDeadLinksFound}</span>
                   </div>
                 ) : (
                   <div className="pagebox-stats__list">
@@ -446,7 +589,7 @@ export function StatisticsDashboard({
                       <div key={item.tabId} className="pagebox-stats__list-item">
                         <div className="pagebox-stats__item-main">
                           <span className="pagebox-badge pagebox-badge--danger">
-                            {item.status ? `HTTP ${item.status}` : item.error || "无法连接"}
+                            {item.status ? `HTTP ${item.status}` : item.error || t.statistics.deadLinkUnreachable}
                           </span>
                           <span className="pagebox-stats__item-title" title={item.title}>
                             {item.title}
@@ -461,14 +604,14 @@ export function StatisticsDashboard({
                             target="_blank"
                             rel="noreferrer"
                             className="pagebox-btn-icon"
-                            title="在新窗口打开测试"
+                            title={t.statistics.openToVerify}
                           >
                             <ExternalLinkIcon size={13} />
                           </a>
                           <button
                             className="pagebox-btn-icon pagebox-btn-icon--danger"
                             onClick={() => handleDeleteSingleTab(item.tabId)}
-                            title="删除该失效书签"
+                            title={t.statistics.deleteDeadLinkTitle}
                           >
                             <TrashIcon size={13} />
                           </button>
@@ -486,12 +629,12 @@ export function StatisticsDashboard({
             <div className="pagebox-stats__card-header">
               <div className="pagebox-stats__card-title">
                 <span className="pagebox-stats__dot-badge" />
-                <span>重复链接治理</span>
-                <span className="pagebox-stats__counter-tag">{totalDuplicateCount} 个多余项</span>
+                <span>{t.statistics.duplicatesTitle}</span>
+                <span className="pagebox-stats__counter-tag">{t.statistics.duplicatesCountTag(totalDuplicateCount)}</span>
               </div>
               {totalDuplicateCount > 0 && (
                 <button className="pagebox-btn pagebox-btn--primary" onClick={handleCleanAllDuplicates}>
-                  一键清理重复（保留首个）
+                  {t.statistics.cleanAllDuplicatesBtn}
                 </button>
               )}
             </div>
@@ -499,7 +642,7 @@ export function StatisticsDashboard({
             {duplicatesGroup.length === 0 ? (
               <div className="pagebox-stats__empty-msg is-success">
                 <CheckCircleIcon size={20} />
-                <span>收藏库内无任何重复 URL，非常整洁！</span>
+                <span>{t.statistics.noDuplicatesClean}</span>
               </div>
             ) : (
               <div className="pagebox-stats__dup-groups">
@@ -509,7 +652,9 @@ export function StatisticsDashboard({
                       <span className="pagebox-stats__dup-url" title={group.url}>
                         {group.url}
                       </span>
-                      <span className="pagebox-badge pagebox-badge--info">重复 {group.items.length} 次</span>
+                      <span className="pagebox-badge pagebox-badge--info">
+                        {t.statistics.duplicateCountBadge(group.items.length)}
+                      </span>
                     </div>
                     <div className="pagebox-stats__dup-items">
                       {group.items.map((item, idx) => {
@@ -517,17 +662,17 @@ export function StatisticsDashboard({
                         return (
                           <div key={item.id} className="pagebox-stats__dup-subitem">
                             <span className="pagebox-stats__dup-idx">
-                              {idx === 0 ? "保留首项" : `副本 #${idx}`}
+                              {idx === 0 ? t.statistics.keepFirst : t.statistics.duplicateCopyIdx(idx)}
                             </span>
                             <span className="pagebox-stats__dup-title">{item.title}</span>
                             <span className="pagebox-stats__dup-folder">
-                              📁 {folder ? folder.name : "未分类"}
+                              📁 {folder ? folder.name : t.manager.uncategorized}
                             </span>
                             {idx > 0 && (
                               <button
                                 className="pagebox-btn-icon pagebox-btn-icon--danger"
                                 onClick={() => handleDeleteSingleTab(item.id)}
-                                title="删除该副本"
+                                title={t.statistics.deleteCopyTitle}
                               >
                                 <TrashIcon size={12} />
                               </button>
@@ -549,19 +694,19 @@ export function StatisticsDashboard({
               <div className="pagebox-stats__card-header">
                 <div className="pagebox-stats__card-title">
                   <FolderYellowIcon size={18} />
-                  <span>空文件夹清理</span>
-                  <span className="pagebox-stats__counter-tag">{emptyFolders.length} 个</span>
+                  <span>{t.statistics.emptyFoldersTitle}</span>
+                  <span className="pagebox-stats__counter-tag">{t.statistics.countItems(emptyFolders.length)}</span>
                 </div>
                 {emptyFolders.length > 0 && (
                   <button className="pagebox-btn pagebox-btn--danger" onClick={handleCleanAllEmptyFolders}>
-                    一键清理全部
+                    {t.statistics.cleanAllBtn}
                   </button>
                 )}
               </div>
               {emptyFolders.length === 0 ? (
                 <div className="pagebox-stats__empty-msg is-success">
                   <CheckCircleIcon size={18} />
-                  <span>没有检测到冗余空目录</span>
+                  <span>{t.statistics.noEmptyFoldersFound}</span>
                 </div>
               ) : (
                 <div className="pagebox-stats__tag-list">
@@ -580,7 +725,7 @@ export function StatisticsDashboard({
               <div className="pagebox-stats__card-header">
                 <div className="pagebox-stats__card-title">
                   <span className="pagebox-tree-icon">📁</span>
-                  <span>未分类标签占比</span>
+                  <span>{t.statistics.uncatRatioTitle}</span>
                 </div>
               </div>
               <div className="pagebox-stats__metric-box">
@@ -600,7 +745,7 @@ export function StatisticsDashboard({
                   />
                 </div>
                 <div className="pagebox-stats__metric-hint">
-                  未归入任何文件夹的散落书签。建议归类整理以提升检索效率。
+                  {t.statistics.uncatRatioHint}
                 </div>
               </div>
             </div>
@@ -616,9 +761,9 @@ export function StatisticsDashboard({
             <div className="pagebox-stats__card-header">
               <div className="pagebox-stats__card-title">
                 <ChartBarIcon size={18} />
-                <span>Top 来源域名分布</span>
+                <span>{t.statistics.topDomainsTitle}</span>
               </div>
-              <span className="pagebox-stats__card-tip">点击域名可直接过滤查看关联书签</span>
+              <span className="pagebox-stats__card-tip">{t.statistics.topDomainsTip}</span>
             </div>
 
             <div className="pagebox-stats__bars-list">
@@ -627,7 +772,7 @@ export function StatisticsDashboard({
                   key={item.domain}
                   className="pagebox-stats__bar-row"
                   onClick={() => onSearchFilter?.(item.domain)}
-                  title={`点击查看 ${item.domain} 的 ${item.count} 个书签`}
+                  title={t.statistics.viewDomainBookmarks(item.domain, item.count)}
                 >
                   <div className="pagebox-stats__bar-label">
                     <span className="pagebox-stats__bar-idx">{idx + 1}</span>
@@ -655,7 +800,7 @@ export function StatisticsDashboard({
                     />
                   </div>
                   <div className="pagebox-stats__bar-val">
-                    <span className="pagebox-stats__bar-count">{item.count} 项</span>
+                    <span className="pagebox-stats__bar-count">{t.statistics.bookmarksCount(item.count)}</span>
                     <span className="pagebox-stats__bar-pct">{item.percent}%</span>
                   </div>
                 </div>
@@ -669,7 +814,7 @@ export function StatisticsDashboard({
               <div className="pagebox-stats__card-header">
                 <div className="pagebox-stats__card-title">
                   <FolderYellowIcon size={18} />
-                  <span>文件夹容量排行</span>
+                  <span>{t.statistics.folderCapacityTitle}</span>
                 </div>
               </div>
               <div className="pagebox-stats__folder-bars">
@@ -678,11 +823,11 @@ export function StatisticsDashboard({
                     key={item.folder.id}
                     className="pagebox-stats__folder-bar-item"
                     onClick={() => onNavigateFolder?.(item.folder.id)}
-                    title={`点击进入文件夹: ${item.folder.name}`}
+                    title={t.statistics.viewFolderTitle(item.folder.name)}
                   >
                     <div className="pagebox-stats__fbar-info">
                       <span className="pagebox-stats__fbar-name">📁 {item.folder.name}</span>
-                      <span className="pagebox-stats__fbar-count">{item.count} 项</span>
+                      <span className="pagebox-stats__fbar-count">{t.statistics.bookmarksCount(item.count)}</span>
                     </div>
                     <div className="pagebox-stats__fbar-track">
                       <div
@@ -700,7 +845,7 @@ export function StatisticsDashboard({
               <div className="pagebox-stats__card-header">
                 <div className="pagebox-stats__card-title">
                   <ActivityIcon size={18} />
-                  <span>月度新增走势</span>
+                  <span>{t.statistics.monthlyTrendTitle}</span>
                 </div>
               </div>
               <div className="pagebox-stats__chart-container">
@@ -709,7 +854,7 @@ export function StatisticsDashboard({
                     const heightPercent =
                       monthlyTrends.maxCount > 0 ? (item.count / monthlyTrends.maxCount) * 100 : 0;
                     return (
-                      <div key={item.month} className="pagebox-stats__histo-col" title={`${item.month}: 新增 ${item.count} 项`}>
+                      <div key={item.month} className="pagebox-stats__histo-col" title={t.statistics.trendTooltip(item.month, item.count)}>
                         <span className="pagebox-stats__histo-val">{item.count > 0 ? item.count : ""}</span>
                         <div className="pagebox-stats__histo-bar-wrap">
                           <div
@@ -733,18 +878,39 @@ export function StatisticsDashboard({
         <div className="pagebox-stats__pane">
           {/* 常读书签 Top 10 */}
           <div className="pagebox-stats__card">
-            <div className="pagebox-stats__card-header">
+            <div className="pagebox-stats__card-header pagebox-stats__card-header--split">
               <div className="pagebox-stats__card-title">
                 <FireIcon size={18} className="pagebox-stats__icon-fire" />
-                <span>常读书签 Top 10（高频访问榜）</span>
+                <span>{t.statistics.popularTitle}</span>
+                <span className="pagebox-stats__card-tip">{t.statistics.popularTip}</span>
               </div>
-              <span className="pagebox-stats__card-tip">从 PageBox 中点击打开即可累加访问频次</span>
+              <div className="pagebox-stats__header-actions">
+                <label className="pagebox-stats__toggle-label" title={t.statistics.historyAuxTip}>
+                  <input
+                    type="checkbox"
+                    checked={enableHistoryAux}
+                    onChange={(e) => setEnableHistoryAux(e.target.checked)}
+                  />
+                  <span>{t.statistics.enableHistoryAux}</span>
+                </label>
+                {enableHistoryAux && (
+                  <button
+                    className="pagebox-btn pagebox-btn--sm"
+                    onClick={() => void fetchHistoryStats()}
+                    disabled={isLoadingHistory}
+                    title={t.statistics.refreshHistoryBtn}
+                  >
+                    <RefreshCwIcon size={13} className={isLoadingHistory ? "pagebox-spin" : ""} />
+                    <span>{isLoadingHistory ? t.statistics.analyzingHistory : t.statistics.refreshHistoryBtn}</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {topVisitedTabs.length === 0 ? (
               <div className="pagebox-stats__empty-msg">
                 <ActivityIcon size={20} />
-                <span>暂无访问记录。平时通过 PageBox 打开书签，将自动为您积累访问热度榜！</span>
+                <span>{t.statistics.noVisitsYet}</span>
               </div>
             ) : (
               <div className="pagebox-stats__list">
@@ -761,19 +927,29 @@ export function StatisticsDashboard({
                       <div className="pagebox-stats__item-meta">
                         <span className="pagebox-stats__item-url">{tab.url}</span>
                         <span className="pagebox-stats__meta-split">•</span>
-                        <span className="pagebox-stats__time-ago">上次访问: {formatTimeAgo(tab.lastVisitedAt)}</span>
+                        <span className="pagebox-stats__time-ago">
+                          {t.statistics.lastVisitedText(formatTimeAgo(tab.effectiveLastVisitedAt))}
+                        </span>
                       </div>
                     </div>
-                    <div className="pagebox-stats__hot-count">
+                    <div
+                      className="pagebox-stats__hot-count"
+                      title={enableHistoryAux ? t.statistics.visitBreakdownText(tab.pluginVisitCount, tab.historyVisitCount) : undefined}
+                    >
                       <FireIcon size={14} />
-                      <span>{tab.visitCount} 次打开</span>
+                      <span>{t.statistics.combinedVisitCountText(tab.combinedVisitCount)}</span>
+                      {enableHistoryAux && (tab.historyVisitCount > 0 || tab.pluginVisitCount > 0) && (
+                        <span className="pagebox-stats__breakdown-tag">
+                          {t.statistics.visitBreakdownText(tab.pluginVisitCount, tab.historyVisitCount)}
+                        </span>
+                      )}
                     </div>
                     <div className="pagebox-stats__item-actions">
                       <button
                         className="pagebox-btn pagebox-btn--primary pagebox-btn--sm"
                         onClick={() => handleOpenTab(tab)}
                       >
-                        打开
+                        {t.statistics.openBtn}
                       </button>
                     </div>
                   </div>
@@ -787,20 +963,27 @@ export function StatisticsDashboard({
             <div className="pagebox-stats__card-header">
               <div className="pagebox-stats__card-title">
                 <MoonIcon size={18} />
-                <span>沉睡书签（超过90天从未在插件内打开）</span>
-                <span className="pagebox-stats__counter-tag">{staleBookmarks.length} 项</span>
+                <span>{t.statistics.staleTitle}</span>
+                <span className="pagebox-stats__counter-tag">{t.statistics.countItems(staleBookmarks.length)}</span>
               </div>
               {staleBookmarks.length > 0 && (
                 <button className="pagebox-btn pagebox-btn--danger" onClick={handleCleanStaleBookmarks}>
-                  一键断舍离全部 ({staleBookmarks.length})
+                  {t.statistics.cleanAllStaleWithCount(staleBookmarks.length)}
                 </button>
               )}
             </div>
 
+            {enableHistoryAux && awakenedCount > 0 && (
+              <div className="pagebox-stats__awakened-banner">
+                <CheckCircleIcon size={16} />
+                <span>{t.statistics.staleAwakenedHint(awakenedCount)}</span>
+              </div>
+            )}
+
             {staleBookmarks.length === 0 ? (
               <div className="pagebox-stats__empty-msg is-success">
                 <CheckCircleIcon size={20} />
-                <span>太棒了！没有长期沉睡的冷门书签。</span>
+                <span>{t.statistics.noStaleTip}</span>
               </div>
             ) : (
               <div className="pagebox-stats__stale-list">
@@ -813,18 +996,18 @@ export function StatisticsDashboard({
                         <span className="pagebox-stats__item-title">{tab.title}</span>
                         <span className="pagebox-stats__item-url">{tab.url}</span>
                       </div>
-                      <span className="pagebox-badge pagebox-badge--muted">已沉睡 {daysOld} 天</span>
+                      <span className="pagebox-badge pagebox-badge--muted">{t.statistics.staleDays(daysOld)}</span>
                       <div className="pagebox-stats__item-actions">
                         <button
                           className="pagebox-btn pagebox-btn--sm"
                           onClick={() => handleOpenTab(tab)}
                         >
-                          唤醒打开
+                          {t.statistics.wakeOpen}
                         </button>
                         <button
                           className="pagebox-btn-icon pagebox-btn-icon--danger"
                           onClick={() => handleDeleteSingleTab(tab.id)}
-                          title="删除该书签"
+                          title={t.statistics.deleteBookmarkTitle}
                         >
                           <TrashIcon size={12} />
                         </button>
@@ -834,11 +1017,117 @@ export function StatisticsDashboard({
                 })}
                 {staleBookmarks.length > 15 && (
                   <div className="pagebox-stats__more-hint">
-                    还有 {staleBookmarks.length - 15} 个沉睡书签未在此列出…
+                    {t.statistics.staleMoreHint(staleBookmarks.length - 15)}
                   </div>
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 批量操作二次确认弹窗 */}
+      {confirmModal && (
+        <div
+          className="pagebox-modal-backdrop"
+          onClick={() => !isConfirmProcessing && setConfirmModal(null)}
+        >
+          <div
+            className="pagebox-modal pagebox-confirm-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="pagebox-modal-header">
+              <h2>
+                <AlertTriangleIcon size={18} className="pagebox-icon--danger" />
+                <span>{confirmModal.title}</span>
+              </h2>
+              <button
+                type="button"
+                className="pagebox-modal-close"
+                onClick={() => setConfirmModal(null)}
+                disabled={isConfirmProcessing}
+                title={t.license.close}
+              >
+                <CloseIcon size={14} />
+              </button>
+            </div>
+
+            <div className="pagebox-modal-body">
+              <p className="pagebox-confirm-modal__desc">{confirmModal.message}</p>
+              {confirmModal.warning && (
+                <div className="pagebox-confirm-modal__warning">
+                  <AlertTriangleIcon size={14} />
+                  <span>{confirmModal.warning}</span>
+                </div>
+              )}
+
+              {confirmModal.items && confirmModal.items.length > 0 && (
+                <div className="pagebox-confirm-modal__preview">
+                  <div className="pagebox-confirm-modal__preview-header">
+                    <span>{t.statistics.previewItemsHeader(confirmModal.items.length)}</span>
+                  </div>
+                  <div className="pagebox-confirm-modal__preview-list">
+                    {confirmModal.items.slice(0, 10).map((item) => (
+                      <div key={item.id} className="pagebox-confirm-modal__preview-item">
+                        <div className="pagebox-confirm-modal__preview-info">
+                          <span className="pagebox-confirm-modal__preview-title">{item.title}</span>
+                          {item.subtitle && (
+                            <span className="pagebox-confirm-modal__preview-sub">{item.subtitle}</span>
+                          )}
+                        </div>
+                        {item.badge && (
+                          <span className="pagebox-badge pagebox-badge--danger">{item.badge}</span>
+                        )}
+                      </div>
+                    ))}
+                    {confirmModal.items.length > 10 && (
+                      <div className="pagebox-confirm-modal__preview-more">
+                        {t.statistics.previewMoreCount(confirmModal.items.length - 10)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="pagebox-modal__actions">
+              <button
+                type="button"
+                className="pagebox-btn pagebox-btn--ghost"
+                onClick={() => setConfirmModal(null)}
+                disabled={isConfirmProcessing}
+              >
+                {t.common.cancel}
+              </button>
+              <button
+                type="button"
+                className={`pagebox-btn ${confirmModal.isDanger ? "pagebox-btn--danger" : "pagebox-btn--primary"}`}
+                onClick={async () => {
+                  setIsConfirmProcessing(true);
+                  try {
+                    await confirmModal.onConfirm();
+                    setConfirmModal(null);
+                  } catch (err) {
+                    console.error("执行批量清理失败:", err);
+                    showStatus(t.statistics.scanError || "操作失败，请重试");
+                  } finally {
+                    setIsConfirmProcessing(false);
+                  }
+                }}
+                disabled={isConfirmProcessing}
+              >
+                {isConfirmProcessing ? (
+                  <>
+                    <RefreshCwIcon size={13} className="pagebox-spin" />
+                    <span>{t.statistics.cleaningInProgress}</span>
+                  </>
+                ) : (
+                  confirmModal.confirmText ?? t.common.confirm
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

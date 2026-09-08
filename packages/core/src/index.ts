@@ -1,6 +1,7 @@
 import type {
   DeadLinkResult,
   Folder,
+  HistoryVisitStats,
   Id,
   PageBoxExport,
   PageBoxStore,
@@ -462,6 +463,53 @@ export class PageBoxService {
    */
   async recordTabVisit(tabId: Id): Promise<void> {
     await this.repo.recordVisit(tabId);
+  }
+
+  /**
+   * 批量获取指定 URL 列表在 Chrome 浏览器历史记录中的访问统计辅助数据
+   * @param urls 需要统计的书签 URL 列表
+   * @returns 各 URL 对应的历史访问统计映射
+   */
+  async getHistoryStats(urls: string[]): Promise<Record<string, HistoryVisitStats>> {
+    const statsMap: Record<string, HistoryVisitStats> = {};
+    if (typeof chrome === "undefined" || !chrome.history || typeof chrome.history.getVisits !== "function") {
+      return statsMap;
+    }
+
+    // 过滤出合法 URL 并去重
+    const validUrls = Array.from(new Set(urls.filter((u) => u && isSaveableUrl(u))));
+    if (validUrls.length === 0) {
+      return statsMap;
+    }
+
+    // 分批并发处理（每批 30 个），避免并发调用过多造成阻塞
+    const BATCH_SIZE = 30;
+    for (let i = 0; i < validUrls.length; i += BATCH_SIZE) {
+      const batch = validUrls.slice(i, i + BATCH_SIZE);
+      await Promise.all(
+        batch.map(async (url) => {
+          try {
+            let visits = await chrome.history.getVisits({ url });
+            // 兼容 URL 末尾斜杠差异（例如 https://example.com 与 https://example.com/）
+            if ((!visits || visits.length === 0) && url.endsWith("/")) {
+              visits = await chrome.history.getVisits({ url: url.slice(0, -1) });
+            } else if ((!visits || visits.length === 0) && !url.endsWith("/") && !url.includes("?") && !url.includes("#")) {
+              visits = await chrome.history.getVisits({ url: `${url}/` });
+            }
+
+            if (visits && visits.length > 0) {
+              const visitCount = visits.length;
+              const lastVisitTime = Math.max(...visits.map((v) => v.visitTime ?? 0));
+              statsMap[url] = { visitCount, lastVisitTime };
+            }
+          } catch (err) {
+            console.warn(`获取 URL 历史记录统计失败 [${url}]:`, err);
+          }
+        })
+      );
+    }
+
+    return statsMap;
   }
 
   /**

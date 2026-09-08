@@ -21,6 +21,8 @@ import {
   readFileContent,
   buildDirectoryFromFileList,
   buildDirectoryFromHandle,
+  buildSingleFileProjectFromHandle,
+  buildSingleFileProjectFromData,
   openDirectoryWithPicker,
   saveFileContent,
   checkFileModified,
@@ -105,15 +107,73 @@ const TreeReaderContent: React.FC<TreeReaderContentProps> = ({
     return findFileById(project, activeFileId) || findFirstFile(project);
   }, [project, activeFileId, findFileById, findFirstFile]);
 
-  // 初始化加载偏好配置（展开状态等轻量配置）
+  // 打开本地目录或单文件
+  const handleDirectoryOpened = useCallback(
+    (newProject: FileItem) => {
+      setProject(newProject);
+      setSaveStatus("idle");
+      setExternalSyncTip("");
+      setIsEditing(false);
+
+      const first = findFirstFile(newProject);
+      if (first) {
+        setActiveFileId(first.id);
+        const { defaultMode } = classifyFile(first.name);
+        setViewMode(defaultMode);
+      }
+
+      // 默认展开首层目录
+      const topDirs = (newProject.children || [])
+        .filter((c) => c.type === "directory")
+        .map((c) => c.id);
+      setExpandedFolders(new Set(topDirs));
+    },
+    [findFirstFile]
+  );
+
+  const [isFileSchemeAllowed, setIsFileSchemeAllowed] = useState<boolean | null>(
+    null
+  );
+  const [isCopiedUrl, setIsCopiedUrl] = useState<boolean>(false);
+
+  // 初始化加载偏好配置与本地文件参数
   useEffect(() => {
     const initData = async () => {
       const savedFolders = await loadExpandedFolders();
       setExpandedFolders(new Set(savedFolders));
+
+      // 检查 Chrome 本地文件网址权限状态
+      if (
+        typeof chrome !== "undefined" &&
+        chrome.extension?.isAllowedFileSchemeAccess
+      ) {
+        chrome.extension.isAllowedFileSchemeAccess((isAllowed) => {
+          setIsFileSchemeAllowed(isAllowed);
+        });
+      }
+
+      // 检查是否从本地 file:/// URL 拖入或快捷点击重定向而来
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("fromLocalFile") === "1") {
+        try {
+          const res = await chrome.storage.local.get(["pendingOpenFile"]);
+          if (res.pendingOpenFile) {
+            const rootProject = buildSingleFileProjectFromData(
+              res.pendingOpenFile
+            );
+            handleDirectoryOpened(rootProject);
+            // 清除已载入的暂存与 URL 参数，防止刷新重复覆盖
+            await chrome.storage.local.remove(["pendingOpenFile"]);
+            window.history.replaceState({}, "", window.location.pathname);
+          }
+        } catch (err) {
+          console.error("加载本地文件失败:", err);
+        }
+      }
     };
 
     void initData();
-  }, []);
+  }, [handleDirectoryOpened]);
 
   // 当激活文件变更时，按需动态读取其正文内容
   useEffect(() => {
@@ -293,24 +353,21 @@ const TreeReaderContent: React.FC<TreeReaderContentProps> = ({
     });
   };
 
-  // 打开本地目录
-  const handleDirectoryOpened = (newProject: FileItem) => {
-    setProject(newProject);
-    setSaveStatus("idle");
-    setExternalSyncTip("");
-    setIsEditing(false);
-
-    const first = findFirstFile(newProject);
-    if (first) {
-      setActiveFileId(first.id);
-    }
-
-    // 默认展开首层目录
-    const topDirs = (newProject.children || [])
-      .filter((c) => c.type === "directory")
-      .map((c) => c.id);
-    setExpandedFolders(new Set(topDirs));
+  // 切换浅色/暗色主题
+  const handleToggleTheme = () => {
+    setSettings((prev) => {
+      const nextTheme: ReaderSettings["theme"] = prev.theme === "dark" ? "light" : "dark";
+      const next = { ...prev, theme: nextTheme };
+      void onSaveSettings(next);
+      return next;
+    });
   };
+
+  // 同步 data-theme 属性到根节点以适配系统级配色与滚动条
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", settings.theme);
+  }, [settings.theme]);
+
 
   // 重新扫描并同步刷新磁盘目录树
   const handleRefreshDirectory = async () => {
@@ -391,6 +448,36 @@ const TreeReaderContent: React.FC<TreeReaderContentProps> = ({
     e.preventDefault();
     setIsDraggingOver(false);
 
+    // 优先尝试现代 File System Access API 句柄（直接获取系统级读写权限）
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      try {
+        const item = e.dataTransfer.items[0];
+        const itemWithHandle = item as unknown as {
+          getAsFileSystemHandle?: () => Promise<FileSystemHandle | null>;
+        };
+        if (typeof itemWithHandle.getAsFileSystemHandle === "function") {
+          const handle = await itemWithHandle.getAsFileSystemHandle();
+          if (handle) {
+            if (handle.kind === "directory") {
+              const rootProject = await buildDirectoryFromHandle(
+                handle as FileSystemDirectoryHandle
+              );
+              handleDirectoryOpened(rootProject);
+              return;
+            } else if (handle.kind === "file") {
+              const rootProject = await buildSingleFileProjectFromHandle(
+                handle as FileSystemFileHandle
+              );
+              handleDirectoryOpened(rootProject);
+              return;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("通过 getAsFileSystemHandle 读取拖拽文件失败，降级为 FileList:", err);
+      }
+    }
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const rootProject = buildDirectoryFromFileList(e.dataTransfer.files);
       handleDirectoryOpened(rootProject);
@@ -399,7 +486,9 @@ const TreeReaderContent: React.FC<TreeReaderContentProps> = ({
 
   return (
     <div
-      className={`treereader-root ${isDraggingOver ? "dragging-over" : ""}`}
+      className={`treereader-root theme-${settings.theme} ${
+        isDraggingOver ? "dragging-over" : ""
+      }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -522,6 +611,8 @@ const TreeReaderContent: React.FC<TreeReaderContentProps> = ({
               onToggleToc={() => setIsTocOpen((prev) => !prev)}
               onToggleEditing={() => setIsEditing((prev) => !prev)}
               onSave={handleSave}
+              theme={settings.theme}
+              onToggleTheme={handleToggleTheme}
             />
 
             {/* 主内容区域 */}
@@ -621,6 +712,29 @@ const TreeReaderContent: React.FC<TreeReaderContentProps> = ({
                 <div className="welcome-drag-hint">
                   {t.welcome.dragHint}
                 </div>
+                {isFileSchemeAllowed === false && (
+                  <div className="file-scheme-permission-banner">
+                    <div className="permission-text">
+                      💡 {t.fileScheme.permissionNotice}
+                    </div>
+                    <button
+                      type="button"
+                      className="copy-scheme-url-btn"
+                      onClick={() => {
+                        const extId =
+                          typeof chrome !== "undefined" && chrome.runtime?.id
+                            ? chrome.runtime.id
+                            : "";
+                        const url = `chrome://extensions/?id=${extId}`;
+                        void navigator.clipboard.writeText(url);
+                        setIsCopiedUrl(true);
+                        setTimeout(() => setIsCopiedUrl(false), 2000);
+                      }}
+                    >
+                      {isCopiedUrl ? t.fileScheme.copied : t.fileScheme.copyUrlBtn}
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="welcome-features-grid">

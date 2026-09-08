@@ -13,6 +13,8 @@
     "build:reader": "turbo build --filter=@apps/tree-reader",
     "zip": "turbo zip",
     "zip:pagebox": "turbo zip --filter=@apps/pagebox",
+    "zip:pagebox:edge": "pnpm --filter @apps/pagebox zip:edge",
+    "submit:pagebox:edge": "pnpm --filter @apps/pagebox submit:edge",
     "zip:demo": "turbo zip --filter=@apps/demo-plugin",
     "zip:reader": "turbo zip --filter=@apps/tree-reader",
     "lint": "turbo lint",

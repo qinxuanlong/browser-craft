@@ -75,6 +75,8 @@ export const zhCN = {
     tocEmpty: "本文档无标题大纲",
     langBtn: "EN",
     langTitle: "Switch to English",
+    themeLight: "切换为浅色模式",
+    themeDark: "切换为暗色模式",
   },
   viewer: {
     reading: "正在读取文件内容...",
@@ -101,6 +103,17 @@ export const zhCN = {
     saveFailed: (err: string) => `保存失败: ${err}`,
     readonlyNotice: "当前文件未获得本地写入授权（可能通过只读降级模式打开）",
     externalSyncNotice: "外部修改已同步",
+  },
+  fileScheme: {
+    permissionNotice: "提示：开启「允许访问文件网址」后，将本地文件直接拖入 Chrome 即可自动用 PageBox 速览查看",
+    copyUrlBtn: "复制管理地址",
+    copied: "已复制",
+    allowedStatus: "已开启直接拖入支持",
+  },
+  fileBar: {
+    title: "PageBox 目录速览",
+    openBtn: "进入大屏速览",
+    autoOpenCheckbox: "总是自动用 PageBox 打开本地文本",
   },
 };
 
@@ -177,6 +190,8 @@ export const enUS: typeof zhCN = {
     tocEmpty: "No headings found in document",
     langBtn: "中文",
     langTitle: "切换为中文",
+    themeLight: "Switch to Light Mode",
+    themeDark: "Switch to Dark Mode",
   },
   viewer: {
     reading: "Reading file content...",
@@ -204,6 +219,17 @@ export const enUS: typeof zhCN = {
     saveFailed: (err: string) => `Save failed: ${err}`,
     readonlyNotice: "Current file is in read-only mode without write permission",
     externalSyncNotice: "External changes synced",
+  },
+  fileScheme: {
+    permissionNotice: "Tip: Enable 'Allow access to file URLs' to automatically open local files in PageBox when dragging into Chrome",
+    copyUrlBtn: "Copy Settings URL",
+    copied: "Copied",
+    allowedStatus: "Direct drag & drop supported",
+  },
+  fileBar: {
+    title: "PageBox TreeReader",
+    openBtn: "Open in PageBox",
+    autoOpenCheckbox: "Always auto-open local text in PageBox",
   },
 };
 

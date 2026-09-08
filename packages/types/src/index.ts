@@ -93,6 +93,14 @@ export interface DeadLinkResult {
   error?: string;
 }
 
+/** 浏览器历史记录访问统计辅助数据 */
+export interface HistoryVisitStats {
+  /** 在 Chrome 历史记录中的访问总次数 */
+  visitCount: number;
+  /** 在 Chrome 历史记录中的最后一次访问时间戳（毫秒） */
+  lastVisitTime?: number;
+}
+
 // 从共享库重新导出通用 License 类型
 export type {
   LicenseStatus,

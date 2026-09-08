@@ -10,6 +10,8 @@ import {
   EyeIcon,
   SaveIcon,
   GlobeIcon,
+  SunIcon,
+  MoonIcon,
 } from "../Icons";
 
 interface ViewerHeaderProps {
@@ -24,6 +26,7 @@ interface ViewerHeaderProps {
   isEditing: boolean;
   saveStatus: SaveStatus;
   canWrite: boolean;
+  theme: "light" | "warm" | "green" | "dark";
   externalSyncTip?: string;
   onToggleSidebar: () => void;
   onViewModeChange: (mode: ViewMode) => void;
@@ -33,6 +36,7 @@ interface ViewerHeaderProps {
   onToggleToc: () => void;
   onToggleEditing: () => void;
   onSave: () => void;
+  onToggleTheme: () => void;
 }
 
 export const ViewerHeader: React.FC<ViewerHeaderProps> = ({
@@ -43,6 +47,8 @@ export const ViewerHeader: React.FC<ViewerHeaderProps> = ({
   fontSize,
   hasToc,
   isTocOpen,
+  theme,
+  onToggleTheme,
   currentContent,
   isEditing,
   saveStatus,
@@ -194,8 +200,18 @@ export const ViewerHeader: React.FC<ViewerHeaderProps> = ({
         )}
       </div>
 
-      {/* 右侧：中英文切换按钮 + 章节大纲按钮 */}
+      {/* 右侧：主题切换 + 中英文切换按钮 + 章节大纲按钮 */}
       <div className="header-right-actions">
+        {/* 浅色 / 暗色主题一键切换 */}
+        <button
+          type="button"
+          className="tool-btn theme-toggle-btn"
+          onClick={onToggleTheme}
+          title={theme === "dark" ? t.header.themeLight : t.header.themeDark}
+        >
+          {theme === "dark" ? <SunIcon size={14} /> : <MoonIcon size={14} />}
+        </button>
+
         {/* 紧凑单按钮中英文切换 */}
         <button
           type="button"

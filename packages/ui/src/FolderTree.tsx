@@ -19,6 +19,7 @@ import {
 } from "./icons";
 import { buildFolderTree, type FolderTreeNode } from "./tree";
 import { TabFavicon } from "./Favicon";
+import { useTranslation } from "./i18n";
 
 export interface FolderTreeRef {
   /** 全部展开所有层级 */
@@ -71,6 +72,7 @@ function TabRow({
   onDeleteTab?: (tab: SavedTab) => void;
   onOpenNotes?: (tab: SavedTab) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className="pagebox-tree-item"
@@ -91,13 +93,13 @@ function TabRow({
       </div>
       <div className="pagebox-tree-item__actions" onClick={(e) => e.stopPropagation()}>
         {onOpenNotes && (
-          <button type="button" onClick={() => onOpenNotes(tab)} title="备注">
-            备注
+          <button type="button" onClick={() => onOpenNotes(tab)} title={t.tree.notes}>
+            {t.tree.notes}
           </button>
         )}
         {onDeleteTab && (
-          <button type="button" onClick={() => onDeleteTab(tab)} title="删除">
-            删除
+          <button type="button" onClick={() => onDeleteTab(tab)} title={t.tree.delete}>
+            {t.tree.delete}
           </button>
         )}
       </div>
@@ -116,6 +118,7 @@ function WindowRow({
   onRestoreWindow?: (win: SavedWindow) => void;
   onDeleteWindow?: (win: SavedWindow) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className="pagebox-tree-item pagebox-tree-item--window"
@@ -126,12 +129,12 @@ function WindowRow({
       <span className="pagebox-tree-item__win-icon">🪟</span>
       <div className="pagebox-tree-item__content">
         <div className="pagebox-tree-item__title">{win.name}</div>
-        <div className="pagebox-tree-item__url">{win.tabs.length} 个标签页</div>
+        <div className="pagebox-tree-item__url">{t.tree.tabsCount(win.tabs.length)}</div>
       </div>
       <div className="pagebox-tree-item__actions" onClick={(e) => e.stopPropagation()}>
         {onDeleteWindow && (
-          <button type="button" onClick={() => onDeleteWindow(win)} title="删除">
-            删除
+          <button type="button" onClick={() => onDeleteWindow(win)} title={t.tree.delete}>
+            {t.tree.delete}
           </button>
         )}
       </div>
@@ -180,6 +183,7 @@ function FolderNode({
     position: "before" | "after" | "inside",
   ) => void;
 }) {
+  const { t } = useTranslation();
   const [dropIndicator, setDropIndicator] = useState<"before" | "after" | "inside" | null>(
     null,
   );
@@ -267,23 +271,20 @@ function FolderNode({
           }
         }}
       >
-        {/* Chevron 展开箭头或占位对齐 */}
-        {hasChildren ? (
-          <button
-            type="button"
-            className="pagebox-tree-chevron"
-            onClick={handleChevronClick}
-            aria-label={isOpen ? "折叠" : "展开"}
-          >
-            {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-          </button>
-        ) : (
-          <div className="pagebox-tree-chevron-placeholder" />
-        )}
+        {/* 展开/折叠三角 */}
+        <span
+          className="pagebox-tree-chevron"
+          onClick={hasChildren ? handleChevronClick : undefined}
+          style={{ visibility: hasChildren ? "visible" : "hidden" }}
+        >
+          {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </span>
 
-        {/* Windows 经典黄色文件夹图标 */}
-        <span className="pagebox-tree-icon">
-          {isOpen && hasChildren ? (
+        {/* 文件夹图标 */}
+        <span className="pagebox-tree-icon" onClick={hasChildren ? handleChevronClick : undefined}>
+          {node.folder.name.includes("其他") ? (
+            <FolderYellowIcon size={16} />
+          ) : isOpen ? (
             <FolderOpenYellowIcon size={16} />
           ) : (
             <FolderYellowIcon size={16} />
@@ -304,7 +305,7 @@ function FolderNode({
             <button
               type="button"
               onClick={() => onCreateFolder(node.folder.id)}
-              title="新建子文件夹"
+              title={t.tree.newSubfolder}
             >
               <PlusIcon size={12} />
             </button>
@@ -313,7 +314,7 @@ function FolderNode({
             <button
               type="button"
               onClick={() => onRenameFolder(node.folder)}
-              title="重命名"
+              title={t.tree.rename}
             >
               ✎
             </button>
@@ -322,7 +323,7 @@ function FolderNode({
             <button
               type="button"
               onClick={() => onDeleteFolder(node.folder)}
-              title="删除文件夹"
+              title={t.tree.deleteFolder}
             >
               <TrashIcon size={12} />
             </button>
@@ -409,6 +410,7 @@ export const FolderTree = forwardRef<FolderTreeRef, FolderTreeProps>(function Fo
   },
   ref,
 ) {
+  const { t } = useTranslation();
   const tree = useMemo(() => buildFolderTree(folders, tabs, windows), [folders, tabs, windows]);
 
   // 计算指定展开深度内的目录集合（默认深度 1：即仅展开 depth 0 的根目录，二级目录展示在列表中但处于折叠收起状态）
@@ -542,7 +544,7 @@ export const FolderTree = forwardRef<FolderTreeRef, FolderTreeProps>(function Fo
           >
             <div className="pagebox-tree-chevron-placeholder" />
             <span className="pagebox-tree-icon">📁</span>
-            <span className="pagebox-tree-name">未分类</span>
+            <span className="pagebox-tree-name">{t.tree.uncategorized}</span>
             <span className="pagebox-tree-count">{uncategorizedCount}</span>
           </div>
 
