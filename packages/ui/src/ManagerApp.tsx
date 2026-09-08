@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { pageBoxService, subscribeToBookmarks } from "@pagebox/core";
 import type { Folder, Id, SavedTab, SavedWindow } from "@pagebox/types";
-import { FolderTree } from "./FolderTree";
+import { FolderTree, type FolderTreeRef } from "./FolderTree";
 import { TabFavicon } from "./Favicon";
 import {
   ChartBarIcon,
@@ -15,6 +15,8 @@ import {
   PlusIcon,
   ThisPcIcon,
   TrashIcon,
+  UnfoldLessIcon,
+  UnfoldMoreIcon,
   WindowGroupIcon,
 } from "./icons";
 import { LicenseModal } from "./LicenseModal";
@@ -32,6 +34,7 @@ export function ManagerApp() {
   const [activeNav, setActiveNav] = useState<NavigationFilter>("all");
   const [selectedTabIds, setSelectedTabIds] = useState<Set<Id>>(new Set());
   const [status, setStatus] = useState("");
+  const sidebarTreeRef = useRef<FolderTreeRef>(null);
 
   // 拖拽状态
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
@@ -559,17 +562,40 @@ export function ManagerApp() {
 
           <div className="pagebox-sidebar__section-header">
             <span>文件夹树 (Windows 目录展开)</span>
-            <button
-              className="pagebox-sidebar__add-btn"
-              onClick={() => handleOpenCreateFolderModal(null)}
-              title="新建根文件夹"
-            >
-              <PlusIcon size={12} />
-            </button>
+            <div className="pagebox-sidebar__header-actions">
+              <button
+                type="button"
+                className="pagebox-sidebar__add-btn"
+                onClick={() => sidebarTreeRef.current?.expandAll()}
+                title="全部展开"
+                aria-label="全部展开"
+              >
+                <UnfoldMoreIcon size={13} />
+              </button>
+              <button
+                type="button"
+                className="pagebox-sidebar__add-btn"
+                onClick={() => sidebarTreeRef.current?.collapseAll()}
+                title="全部收起"
+                aria-label="全部收起"
+              >
+                <UnfoldLessIcon size={13} />
+              </button>
+              <button
+                type="button"
+                className="pagebox-sidebar__add-btn"
+                onClick={() => handleOpenCreateFolderModal(null)}
+                title="新建根文件夹"
+                aria-label="新建根文件夹"
+              >
+                <PlusIcon size={12} />
+              </button>
+            </div>
           </div>
 
           <div className="pagebox-sidebar__tree-container">
             <FolderTree
+              ref={sidebarTreeRef}
               folders={folders}
               tabs={tabs}
               windows={windows}

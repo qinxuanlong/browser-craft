@@ -1,4 +1,13 @@
-import { useMemo, useState, type MouseEvent } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+} from "react";
 import type { Folder, SavedTab, SavedWindow } from "@pagebox/types";
 import {
   ChevronDown,
@@ -11,6 +20,15 @@ import {
 import { buildFolderTree, type FolderTreeNode } from "./tree";
 import { TabFavicon } from "./Favicon";
 
+export interface FolderTreeRef {
+  /** 全部展开所有层级 */
+  expandAll: () => void;
+  /** 全部收起所有层级 */
+  collapseAll: () => void;
+  /** 重置为默认展开状态（默认展开深度） */
+  resetDefault: () => void;
+}
+
 export interface FolderTreeProps {
   folders: Folder[];
   tabs: SavedTab[];
@@ -19,6 +37,8 @@ export interface FolderTreeProps {
   mode?: "full" | "sidebar";
   /** 当前选中的文件夹 ID（支持 null 表示“未分类”，'all' 表示“全部收藏”，'windows' 表示“已收藏窗口”） */
   selectedId?: string | null;
+  /** 默认展开深度（默认为 1，即展开 depth 0 的根目录，二级及更深目录默认收起） */
+  defaultExpandDepth?: number;
   onSelectFolder?: (folderId: string | null) => void;
   onRestoreTab?: (tab: SavedTab) => void;
   onDeleteTab?: (tab: SavedTab) => void;
@@ -124,7 +144,7 @@ function FolderNode({
   depth,
   mode,
   selectedId,
-  collapsed,
+  expandedIds,
   onToggle,
   onSelectFolder,
   onRestoreTab,
@@ -142,7 +162,7 @@ function FolderNode({
   depth: number;
   mode: "full" | "sidebar";
   selectedId?: string | null;
-  collapsed: Set<string>;
+  expandedIds: Set<string>;
   onToggle: (folderId: string) => void;
   onSelectFolder?: (folderId: string | null) => void;
   onRestoreTab?: (tab: SavedTab) => void;
@@ -166,7 +186,7 @@ function FolderNode({
   const hasChildren =
     node.children.length > 0 ||
     (mode === "full" && (node.tabs.length > 0 || node.windows.length > 0));
-  const isOpen = !collapsed.has(node.folder.id);
+  const isOpen = expandedIds.has(node.folder.id);
   const isSelected = selectedId === node.folder.id;
   const isRoot =
     node.folder.id === "1" || node.folder.id === "2" || node.folder.parentId === null;
@@ -321,7 +341,7 @@ function FolderNode({
               depth={depth + 1}
               mode={mode}
               selectedId={selectedId}
-              collapsed={collapsed}
+              expandedIds={expandedIds}
               onToggle={onToggle}
               onSelectFolder={onSelectFolder}
               onRestoreTab={onRestoreTab}
@@ -367,36 +387,97 @@ function FolderNode({
   );
 }
 
-export function FolderTree({
-  folders,
-  tabs,
-  windows = [],
-  mode = "full",
-  selectedId,
-  onSelectFolder,
-  onRestoreTab,
-  onDeleteTab,
-  onOpenNotes,
-  onRestoreWindow,
-  onDeleteWindow,
-  onCreateFolder,
-  onRenameFolder,
-  onDeleteFolder,
-  onDropTabsToFolder,
-  onMoveFolder,
-}: FolderTreeProps) {
+export const FolderTree = forwardRef<FolderTreeRef, FolderTreeProps>(function FolderTree(
+  {
+    folders,
+    tabs,
+    windows = [],
+    mode = "full",
+    selectedId,
+    defaultExpandDepth = 1,
+    onSelectFolder,
+    onRestoreTab,
+    onDeleteTab,
+    onOpenNotes,
+    onRestoreWindow,
+    onDeleteWindow,
+    onCreateFolder,
+    onRenameFolder,
+    onDeleteFolder,
+    onDropTabsToFolder,
+    onMoveFolder,
+  },
+  ref,
+) {
   const tree = useMemo(() => buildFolderTree(folders, tabs, windows), [folders, tabs, windows]);
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+
+  // 计算指定展开深度内的目录集合（默认深度 1：即仅展开 depth 0 的根目录，二级目录展示在列表中但处于折叠收起状态）
+  const computeDefaultExpanded = useCallback((nodes: FolderTreeNode[], maxDepth: number) => {
+    const set = new Set<string>();
+    function traverse(list: FolderTreeNode[], currentDepth: number) {
+      for (const node of list) {
+        if (currentDepth < maxDepth) {
+          set.add(node.folder.id);
+          if (node.children.length > 0) {
+            traverse(node.children, currentDepth + 1);
+          }
+        }
+      }
+    }
+    traverse(nodes, 0);
+    return set;
+  }, []);
+
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() =>
+    computeDefaultExpanded(tree.roots, defaultExpandDepth)
+  );
   const [uncatDragOver, setUncatDragOver] = useState(false);
 
-  const toggleFolder = (folderId: string) => {
-    setCollapsed((prev) => {
+  // 当目录从空列表首次异步加载出来时，自动初始化默认展开深度
+  const hasInitializedRef = useRef(false);
+  useEffect(() => {
+    if (!hasInitializedRef.current && tree.roots.length > 0) {
+      setExpandedIds((prev) => {
+        if (prev.size === 0) {
+          return computeDefaultExpanded(tree.roots, defaultExpandDepth);
+        }
+        return prev;
+      });
+      hasInitializedRef.current = true;
+    }
+  }, [tree.roots, computeDefaultExpanded, defaultExpandDepth]);
+
+  const toggleFolder = useCallback((folderId: string) => {
+    setExpandedIds((prev) => {
       const next = new Set(prev);
       if (next.has(folderId)) next.delete(folderId);
       else next.add(folderId);
       return next;
     });
-  };
+  }, []);
+
+  const expandAll = useCallback(() => {
+    const allIds = new Set<string>(folders.map((f) => f.id));
+    setExpandedIds(allIds);
+  }, [folders]);
+
+  const collapseAll = useCallback(() => {
+    setExpandedIds(new Set());
+  }, []);
+
+  const resetDefault = useCallback(() => {
+    setExpandedIds(computeDefaultExpanded(tree.roots, defaultExpandDepth));
+  }, [tree.roots, defaultExpandDepth, computeDefaultExpanded]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      expandAll,
+      collapseAll,
+      resetDefault,
+    }),
+    [expandAll, collapseAll, resetDefault],
+  );
 
   const uncategorizedCount = tree.uncategorized.length + tree.uncategorizedWindows.length;
 
@@ -410,7 +491,7 @@ export function FolderTree({
           depth={0}
           mode={mode}
           selectedId={selectedId}
-          collapsed={collapsed}
+          expandedIds={expandedIds}
           onToggle={toggleFolder}
           onSelectFolder={onSelectFolder}
           onRestoreTab={onRestoreTab}
@@ -492,4 +573,4 @@ export function FolderTree({
       )}
     </div>
   );
-}
+});

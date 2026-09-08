@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { openManagerPage, pageBoxService, subscribeToBookmarks } from "@pagebox/core";
 import type { Folder, SavedTab, SavedWindow } from "@pagebox/types";
-import { FolderTree } from "./FolderTree";
+import { FolderTree, type FolderTreeRef } from "./FolderTree";
 import { TabFavicon } from "./Favicon";
 import {
   BookmarkPlusIcon,
@@ -12,6 +12,8 @@ import {
   ImportIcon,
   PageBoxLogo,
   SidebarIcon,
+  UnfoldLessIcon,
+  UnfoldMoreIcon,
   WindowSaveIcon,
 } from "./icons";
 import { LicenseModal } from "./LicenseModal";
@@ -33,6 +35,7 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
   const [notesTarget, setNotesTarget] = useState<SavedTab | null>(null);
   const [notesDraft, setNotesDraft] = useState("");
   const [licenseModalOpen, setLicenseModalOpen] = useState(false);
+  const treeRef = useRef<FolderTreeRef>(null);
 
   const { isPro } = useLicense();
 
@@ -152,10 +155,12 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
     <div className={`pagebox-app pagebox-app--${variant}`}>
       <header className="pagebox-header">
         <div className="pagebox-header__brand">
-          <PageBoxLogo size={20} />
-          <h1>PageBox</h1>
-        </div>
-        <div className="pagebox-header__extra">
+          {variant !== "sidepanel" && (
+            <>
+              <PageBoxLogo size={18} />
+              <h1>PageBox</h1>
+            </>
+          )}
           {isPro ? (
             <button
               type="button"
@@ -163,7 +168,7 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
               onClick={() => setLicenseModalOpen(true)}
               title="Pro 尊享特权生效中，点击查看授权"
             >
-              <CrownIcon size={12} />
+              <CrownIcon size={11} />
               <span>PRO</span>
             </button>
           ) : (
@@ -173,73 +178,79 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
               onClick={() => setLicenseModalOpen(true)}
               title="升级 Pro 解锁高级特权"
             >
-              <CrownIcon size={12} />
-              <span>升级 Pro</span>
+              <CrownIcon size={11} />
+              <span>Pro</span>
+            </button>
+          )}
+        </div>
+
+        <div className="pagebox-header__actions">
+          <button
+            type="button"
+            className="pagebox-header-btn pagebox-header-btn--primary"
+            onClick={handleSaveTab}
+            title="收藏当前标签页"
+            aria-label="收藏当前标签页"
+          >
+            <BookmarkPlusIcon size={15} />
+          </button>
+          <button
+            type="button"
+            className="pagebox-header-btn"
+            onClick={handleSaveWindow}
+            title="收藏当前窗口所有标签"
+            aria-label="收藏当前窗口所有标签"
+          >
+            <WindowSaveIcon size={15} />
+          </button>
+          <div className="pagebox-header__divider" />
+          <button
+            type="button"
+            className="pagebox-header-btn"
+            onClick={handleExport}
+            title="导出数据备份 (JSON)"
+            aria-label="导出数据备份"
+          >
+            <ExportIcon size={14} />
+          </button>
+          <button
+            type="button"
+            className="pagebox-header-btn"
+            onClick={handleImport}
+            title="导入数据备份 (JSON)"
+            aria-label="导入数据备份"
+          >
+            <ImportIcon size={14} />
+          </button>
+          <div className="pagebox-header__divider" />
+          <button
+            type="button"
+            className="pagebox-header-btn pagebox-header-btn--highlight"
+            onClick={() => void openManagerPage()}
+            title="在新标签页中打开管理中心"
+            aria-label="在新标签页中打开管理中心"
+          >
+            <ExternalLinkIcon size={14} />
+          </button>
+          {variant === "popup" && (
+            <button
+              type="button"
+              className="pagebox-header-btn"
+              onClick={() => {
+                void chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
+                  if (tab?.windowId !== undefined) {
+                    void chrome.sidePanel.open({ windowId: tab.windowId });
+                  }
+                });
+              }}
+              title="在浏览器侧边栏中打开"
+              aria-label="在浏览器侧边栏中打开"
+            >
+              <SidebarIcon size={14} />
             </button>
           )}
         </div>
       </header>
-
-      <div className="pagebox-toolbar">
-        <button
-          className="pagebox-btn-icon pagebox-btn-icon--primary"
-          onClick={handleSaveTab}
-          title="收藏当前标签页"
-          aria-label="收藏当前标签页"
-        >
-          <BookmarkPlusIcon size={16} />
-        </button>
-        <button
-          className="pagebox-btn-icon"
-          onClick={handleSaveWindow}
-          title="收藏当前窗口所有标签"
-          aria-label="收藏当前窗口所有标签"
-        >
-          <WindowSaveIcon size={16} />
-        </button>
-        <div className="pagebox-toolbar__divider" />
-        <button
-          className="pagebox-btn-icon"
-          onClick={handleExport}
-          title="导出数据备份 (JSON)"
-          aria-label="导出数据备份"
-        >
-          <ExportIcon size={16} />
-        </button>
-        <button
-          className="pagebox-btn-icon"
-          onClick={handleImport}
-          title="导入数据备份 (JSON)"
-          aria-label="导入数据备份"
-        >
-          <ImportIcon size={16} />
-        </button>
-        <div className="pagebox-toolbar__spacer" />
-        <button
-          className="pagebox-btn-icon pagebox-btn-icon--highlight"
-          onClick={() => void openManagerPage()}
-          title="在新标签页中打开管理中心"
-          aria-label="在新标签页中打开管理中心"
-        >
-          <ExternalLinkIcon size={14} />
-        </button>
-        {variant === "popup" && (
-          <button
-            className="pagebox-btn-icon"
-            onClick={() => {
-              void chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
-                if (tab?.windowId !== undefined) {
-                  void chrome.sidePanel.open({ windowId: tab.windowId });
-                }
-              });
-            }}
-            title="在浏览器侧边栏中打开"
-            aria-label="在浏览器侧边栏中打开"
-          >
-            <SidebarIcon size={16} />
-          </button>
-        )}
-      </div>
 
       <div className="pagebox-search">
         <input
@@ -281,8 +292,32 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
 
         {tabs.length > 0 && (
           <>
-            <div className="pagebox-section-title">
-              {isSearching ? `搜索结果 (${tabs.length})` : `收藏目录树 (${tabs.length})`}
+            <div className="pagebox-section-header">
+              <div className="pagebox-section-title">
+                {isSearching ? `搜索结果 (${tabs.length})` : `收藏目录树 (${tabs.length})`}
+              </div>
+              {!isSearching && (
+                <div className="pagebox-tree-header-actions">
+                  <button
+                    type="button"
+                    className="pagebox-tree-tool-btn"
+                    onClick={() => treeRef.current?.expandAll()}
+                    title="全部展开"
+                    aria-label="全部展开"
+                  >
+                    <UnfoldMoreIcon size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    className="pagebox-tree-tool-btn"
+                    onClick={() => treeRef.current?.collapseAll()}
+                    title="全部收起"
+                    aria-label="全部收起"
+                  >
+                    <UnfoldLessIcon size={14} />
+                  </button>
+                </div>
+              )}
             </div>
             {isSearching ? (
               tabs.map((tab) => (
@@ -306,6 +341,7 @@ export function PageBoxApp({ variant = "popup" }: PageBoxAppProps) {
               ))
             ) : (
               <FolderTree
+                ref={treeRef}
                 folders={folders}
                 tabs={tabs}
                 windows={windows}
