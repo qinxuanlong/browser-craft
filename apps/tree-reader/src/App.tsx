@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   FileItem,
   NavTabType,
@@ -6,6 +6,7 @@ import {
   ViewMode,
   TocItem,
   ReaderSettings,
+  SaveStatus,
 } from "./types";
 import {
   loadSettings,
@@ -18,6 +19,11 @@ import { classifyFile } from "./services/fileClassifier";
 import {
   readFileContent,
   buildDirectoryFromFileList,
+  buildDirectoryFromHandle,
+  openDirectoryWithPicker,
+  saveFileContent,
+  checkFileModified,
+  isFileSystemAccessSupported,
 } from "./services/localDirectoryService";
 import { NavTabs } from "./components/Sidebar/NavTabs";
 import { FileTree } from "./components/Sidebar/FileTree";
@@ -26,16 +32,23 @@ import { ViewerHeader } from "./components/Viewer/ViewerHeader";
 import { MarkdownViewer } from "./components/Viewer/MarkdownViewer";
 import { CodeViewer } from "./components/Viewer/CodeViewer";
 import { PlainTextViewer } from "./components/Viewer/PlainTextViewer";
+import { EditorViewer } from "./components/Viewer/EditorViewer";
 import { TocDrawer } from "./components/Viewer/TocDrawer";
 import { FolderOpenIcon } from "./components/Icons";
 
 export const App: React.FC = () => {
-  // 基础项目与文件状态（100% 纯本地内存浏览，绝无假数据或示例）
+  // 基础项目与文件状态（支持读写双向同步与外部热感知）
   const [project, setProject] = useState<FileItem | null>(null);
   const [activeFileId, setActiveFileId] = useState<string>("");
   const [activeContent, setActiveContent] = useState<string>("");
   const [isLoadingContent, setIsLoadingContent] = useState<boolean>(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+
+  // 同步与编辑状态
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const [externalSyncTip, setExternalSyncTip] = useState<string>("");
+  const [isRefreshingDirectory, setIsRefreshingDirectory] = useState<boolean>(false);
 
   // 设置与视图配置
   const [settings, setSettings] = useState<ReaderSettings>(DEFAULT_SETTINGS);
@@ -95,10 +108,11 @@ export const App: React.FC = () => {
     void initData();
   }, []);
 
-  // 当激活文件变更时，按需动态读取其正文内容（绝不持久化存储）
+  // 当激活文件变更时，按需动态读取其正文内容
   useEffect(() => {
     if (!activeFile) {
       setActiveContent("");
+      setSaveStatus("idle");
       return;
     }
 
@@ -113,6 +127,7 @@ export const App: React.FC = () => {
       if (isSubscribed) {
         setActiveContent(content);
         setIsLoadingContent(false);
+        setSaveStatus("idle");
       }
     });
 
@@ -121,9 +136,94 @@ export const App: React.FC = () => {
     };
   }, [activeFile]);
 
+  // 保存当前内容至物理磁盘
+  const handleSave = useCallback(async () => {
+    if (!activeFile) return;
+    if (!activeFile.fileHandle) {
+      alert("当前文件未获得本地写入授权（可能通过只读降级模式打开）");
+      return;
+    }
+    setSaveStatus("saving");
+    try {
+      await saveFileContent(activeFile, activeContent);
+      setSaveStatus("saved");
+      setExternalSyncTip("");
+      setTimeout(() => {
+        setSaveStatus((prev) => (prev === "saved" ? "idle" : prev));
+      }, 2000);
+    } catch (err) {
+      console.error("保存物理文件失败:", err);
+      setSaveStatus("error");
+      alert(`保存失败: ${(err as Error).message}`);
+    }
+  }, [activeFile, activeContent]);
+
+  // 检测外部工具（VSCode/AI/脚本）对本地文件的修改
+  const checkExternalChange = useCallback(async () => {
+    if (!activeFile || !activeFile.fileHandle || !activeFile.lastModified) return;
+
+    try {
+      const isModified = await checkFileModified(activeFile);
+      if (isModified) {
+        if (saveStatus === "dirty") {
+          const reload = window.confirm(
+            `【外部更新提示】物理文件《${activeFile.name}》已被外部工具修改！\n是否重新载入最新内容？（当前界面的未保存草稿将被覆盖）`
+          );
+          if (!reload) return;
+        }
+
+        const freshText = await readFileContent(activeFile, true);
+        setActiveContent(freshText);
+        setSaveStatus("idle");
+        setExternalSyncTip("外部修改已同步");
+        setTimeout(() => setExternalSyncTip(""), 3500);
+      }
+    } catch (err) {
+      console.warn("检查外部文件变动失败:", err);
+    }
+  }, [activeFile, saveStatus]);
+
+  // 窗口聚焦感知与轻量定时轮询
+  useEffect(() => {
+    const handleFocus = () => {
+      void checkExternalChange();
+    };
+    window.addEventListener("focus", handleFocus);
+
+    const timer = setInterval(() => {
+      void checkExternalChange();
+    }, 2500);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      clearInterval(timer);
+    };
+  }, [checkExternalChange]);
+
+  // 全局 Ctrl+S / Cmd+S 快捷保存
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        void handleSave();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleSave]);
+
   // 切换选中文件
   const handleSelectFile = (file: FileItem) => {
+    if (file.id === activeFileId) return;
+    if (saveStatus === "dirty") {
+      const confirmed = window.confirm(
+        "当前文件有未保存的修改，切换文件将丢弃未保存内容，是否确认切换？"
+      );
+      if (!confirmed) return;
+    }
     setActiveFileId(file.id);
+    setSaveStatus("idle");
+    setExternalSyncTip("");
   };
 
   // 折叠/展开文件夹
@@ -188,9 +288,12 @@ export const App: React.FC = () => {
     });
   };
 
-  // 打开本地目录（纯内存浏览，不写入 storage）
+  // 打开本地目录
   const handleDirectoryOpened = (newProject: FileItem) => {
     setProject(newProject);
+    setSaveStatus("idle");
+    setExternalSyncTip("");
+    setIsEditing(false);
 
     const first = findFirstFile(newProject);
     if (first) {
@@ -204,10 +307,45 @@ export const App: React.FC = () => {
     setExpandedFolders(new Set(topDirs));
   };
 
+  // 重新扫描并同步刷新磁盘目录树
+  const handleRefreshDirectory = async () => {
+    if (!project || !project.dirHandle) return;
+    setIsRefreshingDirectory(true);
+    try {
+      const refreshed = await buildDirectoryFromHandle(project.dirHandle);
+      setProject(refreshed);
+
+      if (activeFileId) {
+        const file = findFileById(refreshed, activeFileId);
+        if (file) {
+          const fresh = await readFileContent(file, true);
+          setActiveContent(fresh);
+          setSaveStatus("idle");
+        }
+      }
+    } catch (err) {
+      console.error("刷新目录树失败:", err);
+    } finally {
+      setIsRefreshingDirectory(false);
+    }
+  };
+
   const globalFolderInputRef = useRef<HTMLInputElement>(null);
 
-  // 快捷打开文件夹（直接触发系统标准选择器，无浏览器创建副本弹窗）
-  const handleTriggerOpen = () => {
+  // 快捷打开文件夹（优先唤起原生系统授权读写选择器）
+  const handleTriggerOpen = async () => {
+    if (isFileSystemAccessSupported()) {
+      try {
+        const rootProject = await openDirectoryWithPicker();
+        if (rootProject) {
+          handleDirectoryOpened(rootProject);
+          return;
+        }
+        return;
+      } catch (err) {
+        console.warn("现代文件选择器唤起失败，降级为原生文件输入", err);
+      }
+    }
     globalFolderInputRef.current?.click();
   };
 
@@ -228,6 +366,9 @@ export const App: React.FC = () => {
     setActiveContent("");
     setExpandedFolders(new Set());
     setSearchQuery("");
+    setIsEditing(false);
+    setSaveStatus("idle");
+    setExternalSyncTip("");
   };
 
   // 拖拽文件夹进入窗口快速打开（纯本地只读，不触发复制权限确认）
@@ -336,11 +477,13 @@ export const App: React.FC = () => {
           onOpenDirectory={handleTriggerOpen}
         />
 
-        {/* 底部目录栏（打开本地文件夹 / 切换文件夹 / 关闭当前目录） */}
+        {/* 底部目录栏（打开本地文件夹 / 切换文件夹 / 刷新 / 关闭当前目录） */}
         <ProjectFooter
           project={project}
+          isRefreshing={isRefreshingDirectory}
           onDirectoryOpened={handleDirectoryOpened}
           onCloseDirectory={handleCloseDirectory}
+          onRefreshDirectory={project?.dirHandle ? handleRefreshDirectory : undefined}
         />
       </aside>
 
@@ -358,52 +501,72 @@ export const App: React.FC = () => {
               hasToc={tocList.length > 0}
               isTocOpen={isTocOpen}
               currentContent={activeContent}
+              isEditing={isEditing}
+              saveStatus={saveStatus}
+              canWrite={Boolean(activeFile?.fileHandle)}
+              externalSyncTip={externalSyncTip}
               onToggleSidebar={handleToggleSidebar}
               onViewModeChange={setViewMode}
               onToggleLineNumbers={handleToggleLineNumbers}
               onToggleWordWrap={handleToggleWordWrap}
               onFontSizeChange={handleFontSizeChange}
               onToggleToc={() => setIsTocOpen((prev) => !prev)}
+              onToggleEditing={() => setIsEditing((prev) => !prev)}
+              onSave={handleSave}
             />
 
             {/* 主内容区域 */}
             <div
               className={`viewer-content-viewport ${
-                viewMode !== "markdown" ? "full-width" : ""
+                !isEditing && viewMode !== "markdown" ? "full-width" : ""
               }`}
             >
               {isLoadingContent ? (
                 <div className="viewer-loading-tip">正在读取文件内容...</div>
               ) : activeFile ? (
-                <>
-                  {viewMode === "markdown" && (
-                    <MarkdownViewer
-                      content={activeContent}
-                      fontSize={settings.fontSize}
-                      wordWrap={settings.wordWrap}
-                      onTocExtracted={setTocList}
-                    />
-                  )}
+                isEditing ? (
+                  <EditorViewer
+                    content={activeContent}
+                    onChange={(newVal) => {
+                      setActiveContent(newVal);
+                      setSaveStatus("dirty");
+                    }}
+                    onSave={handleSave}
+                    fontSize={settings.fontSize}
+                    showLineNumbers={settings.showLineNumbers}
+                    wordWrap={settings.wordWrap}
+                  />
+                ) : (
+                  <>
+                    {viewMode === "markdown" && (
+                      <MarkdownViewer
+                        content={activeContent}
+                        fontSize={settings.fontSize}
+                        wordWrap={settings.wordWrap}
+                        onTocExtracted={setTocList}
+                      />
+                    )}
 
-                  {viewMode === "code" && (
-                    <CodeViewer
-                      code={activeContent}
-                      language={activeFile?.language || "typescript"}
-                      fontSize={settings.fontSize}
-                      showLineNumbers={settings.showLineNumbers}
-                      wordWrap={settings.wordWrap}
-                    />
-                  )}
+                    {viewMode === "code" && (
+                      <CodeViewer
+                        code={activeContent}
+                        language={activeFile?.language || "typescript"}
+                        fontSize={settings.fontSize}
+                        showLineNumbers={settings.showLineNumbers}
+                        wordWrap={settings.wordWrap}
+                      />
+                    )}
 
-                  {viewMode === "text" && (
-                    <PlainTextViewer
-                      text={activeContent}
-                      fontSize={settings.fontSize}
-                      showLineNumbers={settings.showLineNumbers}
-                      wordWrap={settings.wordWrap}
-                    />
-                  )}
-                </>
+                    {viewMode === "text" && (
+                      <PlainTextViewer
+                        text={activeContent}
+                        fontSize={settings.fontSize}
+                        showLineNumbers={settings.showLineNumbers}
+                        wordWrap={settings.wordWrap}
+                      />
+                    )}
+                  </>
+                )
               ) : (
                 <div className="viewer-empty-placeholder">
                   👈 请从左侧目录树中选择文件开始查看

@@ -17,7 +17,11 @@ export interface FileItem {
   size?: number;
   rawFile?: File; // 内存中的 File 对象引用（按需动态读取，绝不持久化存储）
   fileHandle?: FileSystemFileHandle; // 现代浏览器 FileSystemFileHandle 句柄
+  dirHandle?: FileSystemDirectoryHandle; // 现代浏览器 FileSystemDirectoryHandle 目录句柄
+  lastModified?: number; // 文件最后修改时间戳（毫秒），用于外部修改对比
 }
+
+export type SaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 
 export type ViewMode = "markdown" | "code" | "text";
 

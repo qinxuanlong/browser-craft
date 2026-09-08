@@ -1,10 +1,13 @@
 import React, { useState } from "react";
-import { ViewMode } from "../../types";
+import { ViewMode, SaveStatus } from "../../types";
 import {
   CollapseSidebarIcon,
   MenuIcon,
   CopyIcon,
   CheckIcon,
+  EditIcon,
+  EyeIcon,
+  SaveIcon,
 } from "../Icons";
 
 interface ViewerHeaderProps {
@@ -16,12 +19,18 @@ interface ViewerHeaderProps {
   hasToc: boolean;
   isTocOpen: boolean;
   currentContent: string;
+  isEditing: boolean;
+  saveStatus: SaveStatus;
+  canWrite: boolean;
+  externalSyncTip?: string;
   onToggleSidebar: () => void;
   onViewModeChange: (mode: ViewMode) => void;
   onToggleLineNumbers: () => void;
   onToggleWordWrap: () => void;
   onFontSizeChange: (delta: number) => void;
   onToggleToc: () => void;
+  onToggleEditing: () => void;
+  onSave: () => void;
 }
 
 export const ViewerHeader: React.FC<ViewerHeaderProps> = ({
@@ -33,12 +42,18 @@ export const ViewerHeader: React.FC<ViewerHeaderProps> = ({
   hasToc,
   isTocOpen,
   currentContent,
+  isEditing,
+  saveStatus,
+  canWrite,
+  externalSyncTip,
   onToggleSidebar,
   onViewModeChange,
   onToggleLineNumbers,
   onToggleWordWrap,
   onFontSizeChange,
   onToggleToc,
+  onToggleEditing,
+  onSave,
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -134,6 +149,46 @@ export const ViewerHeader: React.FC<ViewerHeaderProps> = ({
           {copied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
           <span>{copied ? "已复制" : "复制"}</span>
         </button>
+
+        {/* 编辑 / 预览 切换 */}
+        <button
+          type="button"
+          className={`tool-btn edit-toggle-btn ${isEditing ? "active" : ""}`}
+          onClick={onToggleEditing}
+          title={isEditing ? "切换为预览模式" : "切换为编辑模式"}
+        >
+          {isEditing ? <EyeIcon size={14} /> : <EditIcon size={14} />}
+          <span>{isEditing ? "预览" : "编辑"}</span>
+        </button>
+
+        {/* 保存到物理磁盘 */}
+        <button
+          type="button"
+          className={`tool-btn save-action-btn ${saveStatus === "dirty" ? "highlight" : ""}`}
+          onClick={onSave}
+          disabled={saveStatus === "saving" || !canWrite}
+          title={canWrite ? "保存修改至本地磁盘 (Ctrl+S)" : "当前为只读模式，无法写回磁盘"}
+        >
+          <SaveIcon size={14} />
+          <span>{saveStatus === "saving" ? "保存中..." : "保存"}</span>
+        </button>
+
+        {/* 状态指示徽章 */}
+        {saveStatus === "dirty" && (
+          <span className="save-status-badge dirty" title="有未保存修改">
+            ● 未保存
+          </span>
+        )}
+        {saveStatus === "saved" && (
+          <span className="save-status-badge saved" title="已成功写入本地物理磁盘">
+            ✓ 已保存
+          </span>
+        )}
+        {externalSyncTip && (
+          <span className="save-status-badge external-sync" title={externalSyncTip}>
+            ⚡ {externalSyncTip}
+          </span>
+        )}
       </div>
 
       {/* 右侧：章节大纲/目录抽屉按钮 (对标截图) */}
