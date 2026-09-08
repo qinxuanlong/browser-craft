@@ -35,6 +35,8 @@ export interface TocItem {
   text: string;
 }
 
+export type Locale = "zh-CN" | "en-US";
+
 export interface ReaderSettings {
   isSidebarCollapsed: boolean;
   fontSize: number; // 默认 15px
@@ -43,4 +45,5 @@ export interface ReaderSettings {
   theme: "light" | "warm" | "green" | "dark";
   activeTab: NavTabType;
   filterCategory: FilterCategory;
+  locale: Locale;
 }

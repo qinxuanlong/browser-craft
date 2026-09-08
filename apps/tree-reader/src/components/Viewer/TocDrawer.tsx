@@ -1,5 +1,6 @@
 import React from "react";
 import { TocItem } from "../../types";
+import { useTranslation } from "../../i18n/I18nContext";
 
 interface TocDrawerProps {
   isOpen: boolean;
@@ -12,6 +13,8 @@ export const TocDrawer: React.FC<TocDrawerProps> = ({
   tocList,
   onClose,
 }) => {
+  const { t } = useTranslation();
+
   if (!isOpen) return null;
 
   const scrollToHeading = (id: string) => {
@@ -29,7 +32,7 @@ export const TocDrawer: React.FC<TocDrawerProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="toc-drawer-header">
-          <span className="toc-title">📖 章节与目录大纲</span>
+          <span className="toc-title">{t.toc.title}</span>
           <button type="button" className="toc-close-btn" onClick={onClose}>
             ✕
           </button>
@@ -44,11 +47,11 @@ export const TocDrawer: React.FC<TocDrawerProps> = ({
                 onClick={() => scrollToHeading(item.id)}
               >
                 <span className="toc-level-indicator">{"•".repeat(Math.min(item.level, 3))}</span>
-                <span className="toc-text">{item.text || "无标题小节"}</span>
+                <span className="toc-text">{item.text || t.toc.untitled}</span>
               </div>
             ))
           ) : (
-            <div className="toc-empty-hint">当前文档暂未提取到标题</div>
+            <div className="toc-empty-hint">{t.toc.empty}</div>
           )}
         </div>
       </div>

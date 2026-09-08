@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ViewMode, SaveStatus } from "../../types";
+import { useTranslation } from "../../i18n/I18nContext";
 import {
   CollapseSidebarIcon,
   MenuIcon,
@@ -8,6 +9,7 @@ import {
   EditIcon,
   EyeIcon,
   SaveIcon,
+  GlobeIcon,
 } from "../Icons";
 
 interface ViewerHeaderProps {
@@ -55,6 +57,7 @@ export const ViewerHeader: React.FC<ViewerHeaderProps> = ({
   onToggleEditing,
   onSave,
 }) => {
+  const { t, toggleLocale } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   // 复制代码或全文到剪贴板
@@ -76,7 +79,7 @@ export const ViewerHeader: React.FC<ViewerHeaderProps> = ({
           type="button"
           className="header-icon-btn collapse-btn"
           onClick={onToggleSidebar}
-          title={isSidebarCollapsed ? "展开侧边栏目录" : "收起侧边栏全宽阅读"}
+          title={isSidebarCollapsed ? t.header.expandSidebar : t.header.collapseSidebar}
         >
           <CollapseSidebarIcon size={17} />
         </button>
@@ -86,18 +89,18 @@ export const ViewerHeader: React.FC<ViewerHeaderProps> = ({
           className="mode-select-dropdown"
           value={viewMode}
           onChange={(e) => onViewModeChange(e.target.value as ViewMode)}
-          title="切换查看模式"
+          title={t.header.modeSelectTitle}
         >
-          <option value="markdown">📖 Markdown 排版</option>
-          <option value="code">💻 代码高亮</option>
-          <option value="text">📄 纯文本/日志</option>
+          <option value="markdown">{t.header.modeMarkdown}</option>
+          <option value="code">{t.header.modeCode}</option>
+          <option value="text">{t.header.modeText}</option>
         </select>
       </div>
 
       {/* 中间快捷工具栏 */}
       <div className="header-center-tools">
         {/* 字号缩放 */}
-        <div className="font-size-adjuster" title="字号调节">
+        <div className="font-size-adjuster" title={t.header.fontSizeTitle}>
           <button
             type="button"
             className="tool-btn"
@@ -122,9 +125,9 @@ export const ViewerHeader: React.FC<ViewerHeaderProps> = ({
           type="button"
           className={`tool-btn ${wordWrap ? "active" : ""}`}
           onClick={onToggleWordWrap}
-          title={wordWrap ? "关闭自动折行" : "开启自动折行"}
+          title={wordWrap ? t.header.wrapOff : t.header.wrapOn}
         >
-          换行
+          {t.header.wrap}
         </button>
 
         {/* 代码或纯文本模式下行号开关 */}
@@ -133,9 +136,9 @@ export const ViewerHeader: React.FC<ViewerHeaderProps> = ({
             type="button"
             className={`tool-btn ${showLineNumbers ? "active" : ""}`}
             onClick={onToggleLineNumbers}
-            title={showLineNumbers ? "隐藏行号" : "显示行号"}
+            title={showLineNumbers ? t.header.lineNumbersHide : t.header.lineNumbersShow}
           >
-            行号
+            {t.header.lineNumbers}
           </button>
         )}
 
@@ -144,10 +147,10 @@ export const ViewerHeader: React.FC<ViewerHeaderProps> = ({
           type="button"
           className="tool-btn copy-action-btn"
           onClick={handleCopy}
-          title="复制全文内容"
+          title={t.header.copyTitle}
         >
           {copied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
-          <span>{copied ? "已复制" : "复制"}</span>
+          <span>{copied ? t.header.copied : t.header.copy}</span>
         </button>
 
         {/* 编辑 / 预览 切换 */}
@@ -155,10 +158,10 @@ export const ViewerHeader: React.FC<ViewerHeaderProps> = ({
           type="button"
           className={`tool-btn edit-toggle-btn ${isEditing ? "active" : ""}`}
           onClick={onToggleEditing}
-          title={isEditing ? "切换为预览模式" : "切换为编辑模式"}
+          title={isEditing ? t.header.previewTitle : t.header.editTitle}
         >
           {isEditing ? <EyeIcon size={14} /> : <EditIcon size={14} />}
-          <span>{isEditing ? "预览" : "编辑"}</span>
+          <span>{isEditing ? t.header.preview : t.header.edit}</span>
         </button>
 
         {/* 保存到物理磁盘 */}
@@ -167,21 +170,21 @@ export const ViewerHeader: React.FC<ViewerHeaderProps> = ({
           className={`tool-btn save-action-btn ${saveStatus === "dirty" ? "highlight" : ""}`}
           onClick={onSave}
           disabled={saveStatus === "saving" || !canWrite}
-          title={canWrite ? "保存修改至本地磁盘 (Ctrl+S)" : "当前为只读模式，无法写回磁盘"}
+          title={canWrite ? t.header.saveTitle : t.header.saveReadonlyTitle}
         >
           <SaveIcon size={14} />
-          <span>{saveStatus === "saving" ? "保存中..." : "保存"}</span>
+          <span>{saveStatus === "saving" ? t.header.saving : t.header.save}</span>
         </button>
 
         {/* 状态指示徽章 */}
         {saveStatus === "dirty" && (
-          <span className="save-status-badge dirty" title="有未保存修改">
-            ● 未保存
+          <span className="save-status-badge dirty" title={t.header.dirtyTitle}>
+            {t.header.dirty}
           </span>
         )}
         {saveStatus === "saved" && (
-          <span className="save-status-badge saved" title="已成功写入本地物理磁盘">
-            ✓ 已保存
+          <span className="save-status-badge saved" title={t.header.savedTitle}>
+            ✓ {t.header.saved}
           </span>
         )}
         {externalSyncTip && (
@@ -191,14 +194,26 @@ export const ViewerHeader: React.FC<ViewerHeaderProps> = ({
         )}
       </div>
 
-      {/* 右侧：章节大纲/目录抽屉按钮 (对标截图) */}
+      {/* 右侧：中英文切换按钮 + 章节大纲按钮 */}
       <div className="header-right-actions">
+        {/* 紧凑单按钮中英文切换 */}
+        <button
+          type="button"
+          className="tool-btn lang-toggle-btn"
+          onClick={toggleLocale}
+          title={t.header.langTitle}
+        >
+          <GlobeIcon size={13} />
+          <span>{t.header.langBtn}</span>
+        </button>
+
+        {/* 章节大纲 TOC 抽屉 */}
         <button
           type="button"
           className={`header-icon-btn toc-menu-btn ${isTocOpen ? "active" : ""}`}
           onClick={onToggleToc}
           disabled={!hasToc}
-          title={hasToc ? "展开/收起章节大纲" : "本文档无标题大纲"}
+          title={hasToc ? t.header.tocOpen : t.header.tocEmpty}
         >
           <MenuIcon size={18} />
         </button>

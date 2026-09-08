@@ -1,5 +1,6 @@
 import React from "react";
 import { NavTabType } from "../../types";
+import { useTranslation } from "../../i18n/I18nContext";
 import { FolderIcon, ListIcon, SearchIcon, SlidersIcon } from "../Icons";
 
 interface NavTabsProps {
@@ -8,6 +9,8 @@ interface NavTabsProps {
 }
 
 export const NavTabs: React.FC<NavTabsProps> = ({ activeTab, onTabChange }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="nav-tabs-container">
       {/* 文件夹目录树 Tab */}
@@ -15,7 +18,7 @@ export const NavTabs: React.FC<NavTabsProps> = ({ activeTab, onTabChange }) => {
         type="button"
         className={`nav-tab-btn ${activeTab === "tree" ? "active" : ""}`}
         onClick={() => onTabChange("tree")}
-        title="目录树视图"
+        title={t.nav.tree}
       >
         <FolderIcon size={16} />
       </button>
@@ -25,7 +28,7 @@ export const NavTabs: React.FC<NavTabsProps> = ({ activeTab, onTabChange }) => {
         type="button"
         className={`nav-tab-btn ${activeTab === "list" ? "active" : ""}`}
         onClick={() => onTabChange("list")}
-        title="章节列表视图"
+        title={t.nav.list}
       >
         <ListIcon size={16} />
       </button>
@@ -35,7 +38,7 @@ export const NavTabs: React.FC<NavTabsProps> = ({ activeTab, onTabChange }) => {
         type="button"
         className={`nav-tab-btn ${activeTab === "search" ? "active" : ""}`}
         onClick={() => onTabChange("search")}
-        title="检索文件与正文"
+        title={t.nav.search}
       >
         <SearchIcon size={16} />
       </button>
@@ -45,7 +48,7 @@ export const NavTabs: React.FC<NavTabsProps> = ({ activeTab, onTabChange }) => {
         type="button"
         className={`nav-tab-btn ${activeTab === "filter" ? "active" : ""}`}
         onClick={() => onTabChange("filter")}
-        title="格式过滤与设置"
+        title={t.nav.filter}
       >
         <SlidersIcon size={16} />
       </button>

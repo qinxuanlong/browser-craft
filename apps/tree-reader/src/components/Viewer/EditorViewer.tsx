@@ -1,4 +1,5 @@
 import React, { useRef, useMemo, useEffect } from "react";
+import { useTranslation } from "../../i18n/I18nContext";
 
 interface EditorViewerProps {
   content: string;
@@ -17,6 +18,7 @@ export const EditorViewer: React.FC<EditorViewerProps> = ({
   showLineNumbers,
   wordWrap,
 }) => {
+  const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
 
@@ -88,7 +90,7 @@ export const EditorViewer: React.FC<EditorViewerProps> = ({
           onChange={(e) => onChange(e.target.value)}
           onScroll={handleScroll}
           onKeyDown={handleKeyDown}
-          placeholder="在此输入或编辑内容..."
+          placeholder={t.viewer.editorPlaceholder}
           spellCheck={false}
           autoComplete="off"
           autoCapitalize="off"

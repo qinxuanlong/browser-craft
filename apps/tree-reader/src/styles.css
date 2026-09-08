@@ -1131,3 +1131,16 @@ body, html {
   }
 }
 
+/* 语言切换按钮 (紧凑单按钮) */
+.lang-toggle-btn {
+  font-weight: 600;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.lang-toggle-btn:hover {
+  background-color: var(--accent-bg);
+  color: var(--accent-dark);
+  border-color: var(--accent-color);
+}
+

@@ -1,5 +1,6 @@
 import React, { useRef } from "react";
 import { FileItem } from "../../types";
+import { useTranslation } from "../../i18n/I18nContext";
 import { FolderOpenIcon, RefreshIcon } from "../Icons";
 import {
   buildDirectoryFromFileList,
@@ -22,6 +23,7 @@ export const ProjectFooter: React.FC<ProjectFooterProps> = ({
   onCloseDirectory,
   onRefreshDirectory,
 }) => {
+  const { t } = useTranslation();
   const folderInputRef = useRef<HTMLInputElement>(null);
 
   // 统计目录下总文件数
@@ -63,6 +65,11 @@ export const ProjectFooter: React.FC<ProjectFooterProps> = ({
     }
   };
 
+  const displayProjectName =
+    project && (project.name === "本地目录" || project.name === "Local Directory")
+      ? t.footer.defaultDirectoryName
+      : project?.name || "";
+
   return (
     <div className="project-footer-container">
       {/* 原生系统标准文件夹选择器（零弹窗、零复制、纯只读） */}
@@ -79,10 +86,10 @@ export const ProjectFooter: React.FC<ProjectFooterProps> = ({
       {project ? (
         <>
           <div className="project-info-row">
-            <div className="project-title-text" title={project.name}>
-              📁 {project.name}
+            <div className="project-title-text" title={displayProjectName}>
+              📁 {displayProjectName}
             </div>
-            <div className="project-count-badge">共 {totalFiles} 个文件</div>
+            <div className="project-count-badge">{t.footer.totalFiles(totalFiles)}</div>
           </div>
 
           <div className="project-action-buttons">
@@ -90,10 +97,10 @@ export const ProjectFooter: React.FC<ProjectFooterProps> = ({
               type="button"
               className="footer-btn import-btn"
               onClick={handleOpenDirectory}
-              title="切换其他本地文件夹"
+              title={t.footer.changeFolderTitle}
             >
               <FolderOpenIcon size={13} />
-              <span>切换文件夹</span>
+              <span>{t.footer.changeFolder}</span>
             </button>
 
             {onRefreshDirectory && (
@@ -102,10 +109,10 @@ export const ProjectFooter: React.FC<ProjectFooterProps> = ({
                 className="footer-btn refresh-btn"
                 onClick={onRefreshDirectory}
                 disabled={isRefreshing}
-                title="重新扫描并同步本地磁盘目录"
+                title={t.footer.refreshTitle}
               >
                 <RefreshIcon size={13} className={isRefreshing ? "spin-icon" : ""} />
-                <span>{isRefreshing ? "刷新中" : "刷新"}</span>
+                <span>{isRefreshing ? t.footer.refreshing : t.footer.refresh}</span>
               </button>
             )}
 
@@ -114,9 +121,9 @@ export const ProjectFooter: React.FC<ProjectFooterProps> = ({
                 type="button"
                 className="footer-btn reset-btn"
                 onClick={onCloseDirectory}
-                title="关闭当前目录"
+                title={t.footer.closeTitle}
               >
-                关闭
+                {t.footer.close}
               </button>
             )}
           </div>
@@ -126,10 +133,10 @@ export const ProjectFooter: React.FC<ProjectFooterProps> = ({
           type="button"
           className="footer-btn import-btn full-btn"
           onClick={handleOpenDirectory}
-          title="选择并浏览本地电脑中的文件夹"
+          title={t.footer.openFolderTitle}
         >
           <FolderOpenIcon size={14} />
-          <span>打开本地文件夹</span>
+          <span>{t.footer.openFolder}</span>
         </button>
       )}
     </div>

@@ -1,4 +1,5 @@
 import { ReaderSettings } from "../types";
+import { detectDefaultLocale } from "../i18n/I18nContext";
 
 const SETTINGS_KEY = "treereader_settings";
 const ACTIVE_FILE_KEY = "treereader_active_file";
@@ -12,6 +13,7 @@ export const DEFAULT_SETTINGS: ReaderSettings = {
   theme: "light",
   activeTab: "tree",
   filterCategory: "all",
+  locale: detectDefaultLocale(),
 };
 
 /**

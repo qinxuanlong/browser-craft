@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from "react";
 import { Marked } from "marked";
 import { TocItem } from "../../types";
+import { useTranslation } from "../../i18n/I18nContext";
 
 interface MarkdownViewerProps {
   content: string;
@@ -15,6 +16,8 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   wordWrap,
   onTocExtracted,
 }) => {
+  const { t } = useTranslation();
+
   // 解析 Markdown 并提取 TOC 章节目录
   const { html, tocList } = useMemo(() => {
     if (!content) {
@@ -71,7 +74,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
           dangerouslySetInnerHTML={{ __html: html }}
         />
       ) : (
-        <div className="viewer-empty-placeholder">暂无文本内容</div>
+        <div className="viewer-empty-placeholder">{t.viewer.emptyContent}</div>
       )}
     </div>
   );

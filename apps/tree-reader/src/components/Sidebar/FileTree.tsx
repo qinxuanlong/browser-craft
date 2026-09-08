@@ -1,5 +1,6 @@
 import React from "react";
 import { FileItem, FilterCategory } from "../../types";
+import { useTranslation } from "../../i18n/I18nContext";
 import {
   ChevronRightIcon,
   ChevronDownIcon,
@@ -33,6 +34,7 @@ export const FileTree: React.FC<FileTreeProps> = ({
   onToggleFolder,
   onOpenDirectory,
 }) => {
+  const { t } = useTranslation();
   // 获取文件专属图标
   const renderFileIcon = (file: FileItem) => {
     if (file.category === "markdown" || file.extension === "md") {
@@ -82,15 +84,15 @@ export const FileTree: React.FC<FileTreeProps> = ({
     return (
       <div className="file-tree-empty-welcome">
         <div className="empty-tree-icon">📂</div>
-        <div className="empty-tree-title">未打开任何本地目录</div>
-        <div className="empty-tree-desc">选择一个本地小说、文档或代码文件夹直接只读查看</div>
+        <div className="empty-tree-title">{t.empty.welcomeTitle}</div>
+        <div className="empty-tree-desc">{t.empty.welcomeDesc}</div>
         {onOpenDirectory && (
           <button
             type="button"
             className="empty-open-btn"
             onClick={onOpenDirectory}
           >
-            打开本地文件夹
+            {t.empty.openBtn}
           </button>
         )}
       </div>
@@ -101,7 +103,7 @@ export const FileTree: React.FC<FileTreeProps> = ({
   if (isListView) {
     const allFiles = getAllFiles(project);
     if (allFiles.length === 0) {
-      return <div className="tree-empty-tip">未找到匹配的文件</div>;
+      return <div className="tree-empty-tip">{t.search.noResults}</div>;
     }
     return (
       <div className="file-list-flat">
@@ -190,7 +192,7 @@ export const FileTree: React.FC<FileTreeProps> = ({
       {topLevelChildren.length > 0 ? (
         topLevelChildren.map((child) => renderNode(child, 0))
       ) : (
-        <div className="tree-empty-tip">目录为空或未匹配到文件</div>
+        <div className="tree-empty-tip">{t.search.noResults}</div>
       )}
     </div>
   );

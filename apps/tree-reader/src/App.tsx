@@ -7,6 +7,7 @@ import {
   TocItem,
   ReaderSettings,
   SaveStatus,
+  Locale,
 } from "./types";
 import {
   loadSettings,
@@ -25,6 +26,7 @@ import {
   checkFileModified,
   isFileSystemAccessSupported,
 } from "./services/localDirectoryService";
+import { I18nProvider, useTranslation } from "./i18n/I18nContext";
 import { NavTabs } from "./components/Sidebar/NavTabs";
 import { FileTree } from "./components/Sidebar/FileTree";
 import { ProjectFooter } from "./components/Sidebar/ProjectFooter";
@@ -36,7 +38,19 @@ import { EditorViewer } from "./components/Viewer/EditorViewer";
 import { TocDrawer } from "./components/Viewer/TocDrawer";
 import { FolderOpenIcon } from "./components/Icons";
 
-export const App: React.FC = () => {
+interface TreeReaderContentProps {
+  settings: ReaderSettings;
+  setSettings: React.Dispatch<React.SetStateAction<ReaderSettings>>;
+  onSaveSettings: (settings: ReaderSettings) => void;
+}
+
+const TreeReaderContent: React.FC<TreeReaderContentProps> = ({
+  settings,
+  setSettings,
+  onSaveSettings,
+}) => {
+  const { t } = useTranslation();
+
   // 基础项目与文件状态（支持读写双向同步与外部热感知）
   const [project, setProject] = useState<FileItem | null>(null);
   const [activeFileId, setActiveFileId] = useState<string>("");
@@ -50,8 +64,6 @@ export const App: React.FC = () => {
   const [externalSyncTip, setExternalSyncTip] = useState<string>("");
   const [isRefreshingDirectory, setIsRefreshingDirectory] = useState<boolean>(false);
 
-  // 设置与视图配置
-  const [settings, setSettings] = useState<ReaderSettings>(DEFAULT_SETTINGS);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [viewMode, setViewMode] = useState<ViewMode>("markdown");
   const [tocList, setTocList] = useState<TocItem[]>([]);
@@ -93,15 +105,10 @@ export const App: React.FC = () => {
     return findFileById(project, activeFileId) || findFirstFile(project);
   }, [project, activeFileId, findFileById, findFirstFile]);
 
-  // 初始化加载偏好配置（字号、展开状态等轻量配置）
+  // 初始化加载偏好配置（展开状态等轻量配置）
   useEffect(() => {
     const initData = async () => {
-      const [savedSettings, savedFolders] = await Promise.all([
-        loadSettings(),
-        loadExpandedFolders(),
-      ]);
-
-      setSettings(savedSettings);
+      const savedFolders = await loadExpandedFolders();
       setExpandedFolders(new Set(savedFolders));
     };
 
@@ -140,7 +147,7 @@ export const App: React.FC = () => {
   const handleSave = useCallback(async () => {
     if (!activeFile) return;
     if (!activeFile.fileHandle) {
-      alert("当前文件未获得本地写入授权（可能通过只读降级模式打开）");
+      alert(t.prompts.readonlyNotice);
       return;
     }
     setSaveStatus("saving");
@@ -154,9 +161,9 @@ export const App: React.FC = () => {
     } catch (err) {
       console.error("保存物理文件失败:", err);
       setSaveStatus("error");
-      alert(`保存失败: ${(err as Error).message}`);
+      alert(t.prompts.saveFailed((err as Error).message));
     }
-  }, [activeFile, activeContent]);
+  }, [activeFile, activeContent, t]);
 
   // 检测外部工具（VSCode/AI/脚本）对本地文件的修改
   const checkExternalChange = useCallback(async () => {
@@ -167,7 +174,7 @@ export const App: React.FC = () => {
       if (isModified) {
         if (saveStatus === "dirty") {
           const reload = window.confirm(
-            `【外部更新提示】物理文件《${activeFile.name}》已被外部工具修改！\n是否重新载入最新内容？（当前界面的未保存草稿将被覆盖）`
+            t.prompts.externalConflictConfirm(activeFile.name)
           );
           if (!reload) return;
         }
@@ -175,13 +182,13 @@ export const App: React.FC = () => {
         const freshText = await readFileContent(activeFile, true);
         setActiveContent(freshText);
         setSaveStatus("idle");
-        setExternalSyncTip("外部修改已同步");
+        setExternalSyncTip(t.prompts.externalSyncNotice);
         setTimeout(() => setExternalSyncTip(""), 3500);
       }
     } catch (err) {
       console.warn("检查外部文件变动失败:", err);
     }
-  }, [activeFile, saveStatus]);
+  }, [activeFile, saveStatus, t]);
 
   // 窗口聚焦感知与轻量定时轮询
   useEffect(() => {
@@ -216,9 +223,7 @@ export const App: React.FC = () => {
   const handleSelectFile = (file: FileItem) => {
     if (file.id === activeFileId) return;
     if (saveStatus === "dirty") {
-      const confirmed = window.confirm(
-        "当前文件有未保存的修改，切换文件将丢弃未保存内容，是否确认切换？"
-      );
+      const confirmed = window.confirm(t.prompts.unsavedSwitchConfirm);
       if (!confirmed) return;
     }
     setActiveFileId(file.id);
@@ -244,7 +249,7 @@ export const App: React.FC = () => {
   const handleToggleSidebar = () => {
     setSettings((prev) => {
       const next = { ...prev, isSidebarCollapsed: !prev.isSidebarCollapsed };
-      void saveSettings(next);
+      void onSaveSettings(next);
       return next;
     });
   };
@@ -256,7 +261,7 @@ export const App: React.FC = () => {
         ...prev,
         fontSize: Math.max(12, Math.min(26, prev.fontSize + delta)),
       };
-      void saveSettings(next);
+      void onSaveSettings(next);
       return next;
     });
   };
@@ -265,7 +270,7 @@ export const App: React.FC = () => {
   const handleToggleLineNumbers = () => {
     setSettings((prev) => {
       const next = { ...prev, showLineNumbers: !prev.showLineNumbers };
-      void saveSettings(next);
+      void onSaveSettings(next);
       return next;
     });
   };
@@ -274,7 +279,7 @@ export const App: React.FC = () => {
   const handleToggleWordWrap = () => {
     setSettings((prev) => {
       const next = { ...prev, wordWrap: !prev.wordWrap };
-      void saveSettings(next);
+      void onSaveSettings(next);
       return next;
     });
   };
@@ -283,7 +288,7 @@ export const App: React.FC = () => {
   const handleTabChange = (tab: NavTabType) => {
     setSettings((prev) => {
       const next = { ...prev, activeTab: tab };
-      void saveSettings(next);
+      void onSaveSettings(next);
       return next;
     });
   };
@@ -428,7 +433,7 @@ export const App: React.FC = () => {
             <input
               type="text"
               className="sidebar-search-input"
-              placeholder="搜索文件名或文本内容..."
+              placeholder={t.search.placeholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus
@@ -448,16 +453,20 @@ export const App: React.FC = () => {
                     settings.filterCategory === cat ? "active" : ""
                   }`}
                   onClick={() =>
-                    setSettings((prev) => ({ ...prev, filterCategory: cat }))
+                    setSettings((prev) => {
+                      const next = { ...prev, filterCategory: cat };
+                      void onSaveSettings(next);
+                      return next;
+                    })
                   }
                 >
                   {cat === "all"
-                    ? "全部"
+                    ? t.filter.all
                     : cat === "markdown"
-                    ? "文档"
+                    ? t.filter.markdown
                     : cat === "code"
-                    ? "代码"
-                    : "纯文本"}
+                    ? t.filter.code
+                    : t.filter.text}
                 </button>
               )
             )}
@@ -522,7 +531,7 @@ export const App: React.FC = () => {
               }`}
             >
               {isLoadingContent ? (
-                <div className="viewer-loading-tip">正在读取文件内容...</div>
+                <div className="viewer-loading-tip">{t.viewer.reading}</div>
               ) : activeFile ? (
                 isEditing ? (
                   <EditorViewer
@@ -569,7 +578,7 @@ export const App: React.FC = () => {
                 )
               ) : (
                 <div className="viewer-empty-placeholder">
-                  👈 请从左侧目录树中选择文件开始查看
+                  {t.viewer.selectFileTip}
                 </div>
               )}
             </div>
@@ -588,16 +597,16 @@ export const App: React.FC = () => {
               <div className="welcome-logo-badge">
                 <img
                   src="/icons/icon-128.png"
-                  alt="PageBox 目录速览"
+                  alt={t.welcome.title}
                   className="welcome-logo-img"
                   onError={(e) => {
                     (e.target as HTMLElement).style.display = "none";
                   }}
                 />
               </div>
-              <h1 className="welcome-title">PageBox — 目录速览</h1>
+              <h1 className="welcome-title">{t.welcome.title}</h1>
               <p className="welcome-subtitle">
-                专为本地多级目录树、结构化文本与代码打造的极速查看器
+                {t.welcome.subtitle}
               </p>
 
               <div className="welcome-action-box">
@@ -607,10 +616,10 @@ export const App: React.FC = () => {
                   onClick={handleTriggerOpen}
                 >
                   <FolderOpenIcon size={18} />
-                  <span>打开本地文件夹</span>
+                  <span>{t.welcome.openBtn}</span>
                 </button>
                 <div className="welcome-drag-hint">
-                  或直接将本地文件夹拖入浏览器窗口
+                  {t.welcome.dragHint}
                 </div>
               </div>
 
@@ -618,22 +627,22 @@ export const App: React.FC = () => {
                 <div className="feature-item">
                   <div className="feature-icon">⚡</div>
                   <div className="feature-text">
-                    <strong>秒级毫秒渲染</strong>
-                    <span>仅按需实时只读读取，万级大目录瞬间打开</span>
+                    <strong>{t.welcome.feature1Title}</strong>
+                    <span>{t.welcome.feature1Desc}</span>
                   </div>
                 </div>
                 <div className="feature-item">
                   <div className="feature-icon">🔒</div>
                   <div className="feature-text">
-                    <strong>纯本地隐私安全</strong>
-                    <span>100% 离线运行，不上传任何内容，无数据残留</span>
+                    <strong>{t.welcome.feature2Title}</strong>
+                    <span>{t.welcome.feature2Desc}</span>
                   </div>
                 </div>
                 <div className="feature-item">
                   <div className="feature-icon">📖</div>
                   <div className="feature-text">
-                    <strong>多模态排版支持</strong>
-                    <span>支持 Markdown 沉浸排版、代码语法高亮与系统日志</span>
+                    <strong>{t.welcome.feature3Title}</strong>
+                    <span>{t.welcome.feature3Desc}</span>
                   </div>
                 </div>
               </div>
@@ -642,5 +651,35 @@ export const App: React.FC = () => {
         )}
       </main>
     </div>
+  );
+};
+
+export const App: React.FC = () => {
+  const [settings, setSettings] = useState<ReaderSettings>(DEFAULT_SETTINGS);
+
+  useEffect(() => {
+    const init = async () => {
+      const savedSettings = await loadSettings();
+      setSettings(savedSettings);
+    };
+    void init();
+  }, []);
+
+  const handleLocaleChange = (newLocale: Locale) => {
+    setSettings((prev) => {
+      const next = { ...prev, locale: newLocale };
+      void saveSettings(next);
+      return next;
+    });
+  };
+
+  return (
+    <I18nProvider locale={settings.locale} onLocaleChange={handleLocaleChange}>
+      <TreeReaderContent
+        settings={settings}
+        setSettings={setSettings}
+        onSaveSettings={saveSettings}
+      />
+    </I18nProvider>
   );
 };
