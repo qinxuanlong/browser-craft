@@ -13,7 +13,7 @@ export default defineConfig({
     description: "收藏、搜索、恢复浏览器标签页与窗口",
     version: "0.0.1",
     permissions: ["tabs", "storage", "sidePanel", "bookmarks", "favicon"],
-    host_permissions: ["https://api.lemonsqueezy.com/*"],
+    host_permissions: ["https://api.lemonsqueezy.com/*", "*://*/*"],
     web_accessible_resources: [
       {
         resources: ["_favicon/*"],

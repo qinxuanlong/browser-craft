@@ -1,4 +1,5 @@
 import type {
+  DeadLinkResult,
   Folder,
   Id,
   PageBoxExport,
@@ -61,6 +62,8 @@ export class PageBoxService {
             sortOrder: order,
             createdAt: node.dateAdded ?? now(),
             updatedAt: node.dateAdded ?? now(),
+            visitCount: meta?.visitCount ?? 0,
+            lastVisitedAt: meta?.lastVisitedAt,
           });
         } else {
           // 文件夹节点
@@ -450,6 +453,40 @@ export class PageBoxService {
     const [node] = await chrome.bookmarks.get(tabId);
     if (node?.url) {
       await chrome.tabs.create({ url: node.url, active: true });
+      await this.recordTabVisit(tabId);
+    }
+  }
+
+  /**
+   * 记录书签访问（递增访问次数与最后访问时间）
+   */
+  async recordTabVisit(tabId: Id): Promise<void> {
+    await this.repo.recordVisit(tabId);
+  }
+
+  /**
+   * 批量删除书签及关联元数据
+   */
+  async batchDeleteTabs(tabIds: Id[]): Promise<void> {
+    for (const id of tabIds) {
+      try {
+        await this.deleteTab(id);
+      } catch (e) {
+        console.error(`删除书签 ${id} 失败:`, e);
+      }
+    }
+  }
+
+  /**
+   * 批量删除文件夹
+   */
+  async batchDeleteFolders(folderIds: Id[]): Promise<void> {
+    for (const id of folderIds) {
+      try {
+        await this.deleteFolder(id, true);
+      } catch (e) {
+        console.error(`删除文件夹 ${id} 失败:`, e);
+      }
     }
   }
 
@@ -668,3 +705,201 @@ export async function syncTabFavicon(url: string, favIconUrl: string): Promise<v
     console.error("同步 Favicon 失败:", error);
   }
 }
+
+/**
+ * 查找空文件夹（不含任何书签，且子孙文件夹也均为空的目录）
+ * 排除系统内置根文件夹（0, 1, 2, 3 等）
+ */
+export function findEmptyFolders(folders: Folder[], tabs: SavedTab[]): Folder[] {
+  const systemFolderIds = new Set(["0", "1", "2", "3"]);
+
+  // 建立 folderId -> 直接包含的 tab 数量
+  const tabCountMap = new Map<Id, number>();
+  for (const tab of tabs) {
+    if (tab.folderId) {
+      tabCountMap.set(tab.folderId, (tabCountMap.get(tab.folderId) ?? 0) + 1);
+    }
+  }
+
+  // 建立 parentId -> 子文件夹列表
+  const childrenMap = new Map<Id, Folder[]>();
+  for (const folder of folders) {
+    if (folder.parentId) {
+      const list = childrenMap.get(folder.parentId) ?? [];
+      list.push(folder);
+      childrenMap.set(folder.parentId, list);
+    }
+  }
+
+  // 递归计算某个文件夹及其所有子孙文件夹的总 tab 数
+  const totalDescendantTabsMap = new Map<Id, number>();
+  function countTotalTabs(folderId: Id): number {
+    if (totalDescendantTabsMap.has(folderId)) {
+      return totalDescendantTabsMap.get(folderId)!;
+    }
+    let count = tabCountMap.get(folderId) ?? 0;
+    const children = childrenMap.get(folderId) ?? [];
+    for (const child of children) {
+      count += countTotalTabs(child.id);
+    }
+    totalDescendantTabsMap.set(folderId, count);
+    return count;
+  }
+
+  return folders.filter((folder) => {
+    if (systemFolderIds.has(folder.id)) return false;
+    return countTotalTabs(folder.id) === 0;
+  });
+}
+
+/**
+ * 探测单个书签链接可用性
+ * 1. 优先通过 chrome.runtime.sendMessage 发送到 Background Service Worker（具备 host_permissions 豁免跨域限制）
+ * 2. 如果后台无响应或在普通前端环境，降级执行带 no-cors 兜底的连通性探测，彻底杜绝因同源策略导致的误判
+ */
+async function probeSingleUrl(
+  url: string,
+  timeoutMs = 6000
+): Promise<{ ok: boolean; status?: number; error?: string }> {
+  // 1. 尝试委托 Background Service Worker 处理
+  if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
+    try {
+      const bgResult = await new Promise<{ ok: boolean; status?: number; error?: string } | null>((resolve) => {
+        const timer = setTimeout(() => resolve(null), timeoutMs + 1000);
+        chrome.runtime.sendMessage(
+          { type: "PAGEBOX_CHECK_URL", url, timeoutMs },
+          (response) => {
+            clearTimeout(timer);
+            if (chrome.runtime.lastError || !response) {
+              resolve(null);
+            } else {
+              resolve(response);
+            }
+          }
+        );
+      });
+      if (bgResult !== null) {
+        return bgResult;
+      }
+    } catch {
+      // 降级使用本地探测
+    }
+  }
+
+  // 2. 本地探测（前台环境兜底）
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    let res: Response | null = null;
+    try {
+      res = await fetch(url, {
+        method: "GET",
+        signal: controller.signal,
+        redirect: "follow",
+      });
+    } catch {
+      if (controller.signal.aborted) {
+        return { ok: false, error: "请求超时 (6秒无响应)" };
+      }
+      // 关键防误判机制：若因未配置 CORS 响应头导致 fetch 报错，使用 mode: "no-cors" 检验真实网络可达性
+      try {
+        await fetch(url, {
+          method: "GET",
+          mode: "no-cors",
+          signal: controller.signal,
+        });
+        // 成功建立网络连接并获得响应，说明服务器存活，并非死链
+        return { ok: true };
+      } catch {
+        return {
+          ok: false,
+          error: controller.signal.aborted ? "请求超时" : "无法连接 / 域名无法解析",
+        };
+      }
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (res) {
+      // 401/403 表示页面存在但需要登录/权限（如内网系统），并非死链
+      if (res.status === 401 || res.status === 403) {
+        return { ok: true, status: res.status };
+      }
+      if (res.status >= 400) {
+        return {
+          ok: false,
+          status: res.status,
+          error: `HTTP ${res.status} (${res.statusText || "访问出错"})`,
+        };
+      }
+      return { ok: true, status: res.status };
+    }
+
+    return { ok: true };
+  } catch {
+    clearTimeout(timer);
+    return { ok: false, error: "网络连接异常" };
+  }
+}
+
+/**
+ * 批量探测书签链接可用性（检测 404 / 500 / 域名失效 / 连接超时等）
+ * 支持并发控制与进度回调
+ */
+export async function checkDeadLinks(
+  tabs: SavedTab[],
+  onProgress?: (checked: number, total: number) => void,
+  concurrency = 5
+): Promise<DeadLinkResult[]> {
+  // 仅对有效 http / https 链接探测
+  const validTabs = tabs.filter((t) => {
+    try {
+      const url = new URL(t.url);
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+      return false;
+    }
+  });
+
+  const total = validTabs.length;
+  if (total === 0) return [];
+
+  let checked = 0;
+  const deadLinks: DeadLinkResult[] = [];
+
+  async function testTab(tab: SavedTab): Promise<DeadLinkResult | null> {
+    const result = await probeSingleUrl(tab.url, 6000);
+    if (!result.ok) {
+      return {
+        tabId: tab.id,
+        url: tab.url,
+        title: tab.title,
+        status: result.status,
+        error: result.error || "无法访问",
+      };
+    }
+    return null;
+  }
+
+  let currentIndex = 0;
+  async function worker() {
+    while (currentIndex < validTabs.length) {
+      const index = currentIndex++;
+      const tab = validTabs[index];
+      const result = await testTab(tab);
+      if (result) {
+        deadLinks.push(result);
+      }
+      checked++;
+      onProgress?.(checked, total);
+    }
+  }
+
+  const poolSize = Math.min(concurrency, validTabs.length);
+  const workers = Array.from({ length: poolSize }, () => worker());
+  await Promise.all(workers);
+
+  return deadLinks;
+}
+

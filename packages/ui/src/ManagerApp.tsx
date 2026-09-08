@@ -4,6 +4,7 @@ import type { Folder, Id, SavedTab, SavedWindow } from "@pagebox/types";
 import { FolderTree } from "./FolderTree";
 import { TabFavicon } from "./Favicon";
 import {
+  ChartBarIcon,
   ChevronRight,
   CloseIcon,
   CrownIcon,
@@ -18,9 +19,10 @@ import {
 } from "./icons";
 import { LicenseModal } from "./LicenseModal";
 import { useLicense } from "./useLicense";
+import { StatisticsDashboard } from "./StatisticsDashboard";
 import "./styles.css";
 
-type NavigationFilter = "all" | "uncategorized" | "windows" | "bookmarks" | string; // string is folderId
+type NavigationFilter = "all" | "uncategorized" | "windows" | "bookmarks" | "statistics" | string; // string is folderId
 
 export function ManagerApp() {
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -86,7 +88,8 @@ export function ManagerApp() {
       activeNav === "all" ||
       activeNav === "uncategorized" ||
       activeNav === "windows" ||
-      activeNav === "bookmarks"
+      activeNav === "bookmarks" ||
+      activeNav === "statistics"
     ) {
       return null;
     }
@@ -95,6 +98,7 @@ export function ManagerApp() {
 
   // 根据当前侧边栏导航筛选展示的内容
   const displayedTabs = useMemo(() => {
+    if (activeNav === "statistics") return [];
     let list: SavedTab[] = [];
     if (query.trim()) list = tabs;
     else if (activeNav === "all") list = tabs;
@@ -107,6 +111,7 @@ export function ManagerApp() {
   }, [activeNav, tabs, query]);
 
   const displayedWindows = useMemo(() => {
+    if (activeNav === "statistics") return [];
     let list: SavedWindow[] = [];
     if (query.trim()) list = windows;
     else if (activeNav === "all" || activeNav === "windows") list = windows;
@@ -120,6 +125,7 @@ export function ManagerApp() {
   // 面包屑导航计算
   const breadcrumbList = useMemo(() => {
     if (query.trim()) return [{ id: "search", name: `搜索: "${query}"` }];
+    if (activeNav === "statistics") return [{ id: "statistics", name: "统计看板" }];
     if (activeNav === "all") return [{ id: "all", name: "全部收藏" }];
     if (activeNav === "uncategorized") return [{ id: "uncategorized", name: "未分类" }];
     if (activeNav === "windows") return [{ id: "windows", name: "已收藏窗口" }];
@@ -458,6 +464,16 @@ export function ManagerApp() {
 
         <div className="pagebox-manager__top-actions">
           <button
+            className={`pagebox-btn ${activeNav === "statistics" ? "pagebox-btn--highlight" : ""}`}
+            onClick={() => {
+              setActiveNav("statistics");
+              setQuery("");
+            }}
+            title="书签全维数据统计与健康治理看板"
+          >
+            <ChartBarIcon size={14} /> 统计看板
+          </button>
+          <button
             className="pagebox-btn pagebox-btn--primary"
             onClick={() => handleOpenCreateFolderModal(currentFolder?.id ?? null)}
           >
@@ -501,6 +517,20 @@ export function ManagerApp() {
             >
               <ThisPcIcon size={16} />
               <span className="pagebox-sidebar__nav-label">全部收藏</span>
+              <span className="pagebox-sidebar__nav-badge">{tabs.length}</span>
+            </button>
+
+            <button
+              className={`pagebox-sidebar__nav-item ${
+                activeNav === "statistics" ? "is-active" : ""
+              }`}
+              onClick={() => {
+                setActiveNav("statistics");
+                setQuery("");
+              }}
+            >
+              <ChartBarIcon size={16} />
+              <span className="pagebox-sidebar__nav-label">统计看板</span>
               <span className="pagebox-sidebar__nav-badge">{tabs.length}</span>
             </button>
 
@@ -617,8 +647,22 @@ export function ManagerApp() {
             </div>
           </div>
 
-          {/* 批量操作控制条 */}
-          {displayedTabs.length > 0 && (
+          {activeNav === "statistics" ? (
+            <StatisticsDashboard
+              tabs={tabs}
+              folders={folders}
+              onRefresh={refresh}
+              onNavigateFolder={(folderId) => setActiveNav(folderId)}
+              onSearchFilter={(term) => {
+                setActiveNav("all");
+                setQuery(term);
+              }}
+              showStatus={showStatus}
+            />
+          ) : (
+            <>
+              {/* 批量操作控制条 */}
+              {displayedTabs.length > 0 && (
             <div className="pagebox-batch-bar">
               <label className="pagebox-batch-bar__select-all">
                 <input
@@ -923,6 +967,8 @@ export function ManagerApp() {
               </>
             )}
           </div>
+            </>
+          )}
         </main>
       </div>
 

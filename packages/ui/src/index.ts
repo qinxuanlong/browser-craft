@@ -8,3 +8,6 @@ export { useLicense } from "./useLicense";
 export { LicenseModal } from "./LicenseModal";
 export type { LicenseModalProps } from "./LicenseModal";
 export * from "./Favicon";
+export { StatisticsDashboard } from "./StatisticsDashboard";
+export type { StatisticsDashboardProps } from "./StatisticsDashboard";
+

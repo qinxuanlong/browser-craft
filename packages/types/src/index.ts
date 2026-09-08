@@ -16,6 +16,10 @@ export interface SavedTab {
   sortOrder?: number;
   createdAt: number;
   updatedAt: number;
+  /** 在 PageBox 中打开访问的次数 */
+  visitCount?: number;
+  /** 最后一次打开访问的时间戳 */
+  lastVisitedAt?: number;
 }
 
 /** 收藏的窗口（含多个标签） */
@@ -69,11 +73,24 @@ export interface SearchResult {
   windows: SavedWindow[];
 }
 
-/** 扩展元数据（备注、标签与高清图标） */
+/** 扩展元数据（备注、标签与高清图标、访问统计） */
 export interface BookmarkMetadata {
   notes?: string;
   tags?: string[];
   favIconUrl?: string;
+  /** 访问打开次数 */
+  visitCount?: number;
+  /** 最后访问时间戳 */
+  lastVisitedAt?: number;
+}
+
+/** 死链检测结果 */
+export interface DeadLinkResult {
+  tabId: Id;
+  url: string;
+  title: string;
+  status?: number;
+  error?: string;
 }
 
 // 从共享库重新导出通用 License 类型

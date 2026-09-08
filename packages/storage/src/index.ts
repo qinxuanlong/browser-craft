@@ -64,6 +64,20 @@ export class LocalStorageRepository {
   }
 
   /**
+   * 记录书签访问（访问次数累加，更新最后访问时间）
+   */
+  async recordVisit(bookmarkId: string): Promise<void> {
+    const all = await this.getAllMetadata();
+    const current = all[bookmarkId] || {};
+    all[bookmarkId] = {
+      ...current,
+      visitCount: (current.visitCount ?? 0) + 1,
+      lastVisitedAt: Date.now(),
+    };
+    await chrome.storage.local.set({ [METADATA_STORAGE_KEY]: all });
+  }
+
+  /**
    * 获取保存的窗口集合
    */
   async getWindows(): Promise<SavedWindow[]> {

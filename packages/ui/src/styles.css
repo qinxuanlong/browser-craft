@@ -1993,5 +1993,774 @@ textarea {
   border-color: #f87171;
 }
 
+/* ==========================================================================
+   书签全维统计看板与健康治理系统 (Statistics Dashboard)
+   ========================================================================== */
+
+.pagebox-stats {
+  padding: 20px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 顶部概览指标与健康评分 */
+.pagebox-stats__hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.pagebox-stats__score-card {
+  flex: 1 1 360px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.pagebox-stats__score-circle {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  color: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.25);
+  padding-top: 18px;
+  box-sizing: border-box;
+}
+
+.pagebox-stats__score-val {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.pagebox-stats__score-unit {
+  font-size: 13px;
+  font-weight: 500;
+  margin-left: 2px;
+  opacity: 0.9;
+}
+
+.pagebox-stats__score-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pagebox-stats__score-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.pagebox-stats__score-desc {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.pagebox-stats__hero-kpis {
+  flex: 2 1 480px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.pagebox-kpi-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 14px 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.pagebox-kpi-num {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.pagebox-kpi-label {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* 专区 Tab 切换栏 */
+.pagebox-stats__tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 20px;
+}
+
+.pagebox-stats__tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.pagebox-stats__tab-btn:hover {
+  color: #334155;
+}
+
+.pagebox-stats__tab-btn.is-active {
+  color: #4f46e5;
+  border-bottom-color: #4f46e5;
+}
+
+.pagebox-stats__tab-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  position: absolute;
+  top: 8px;
+  right: 6px;
+}
+
+/* 专区面板与卡片容器 */
+.pagebox-stats__pane {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.pagebox-stats__card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.pagebox-stats__card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.pagebox-stats__card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.pagebox-stats__card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pagebox-stats__card-tip {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.pagebox-stats__counter-tag {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.pagebox-stats__dot-badge {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+}
+
+/* 进度条 */
+.pagebox-stats__progress-wrap {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.pagebox-stats__progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.pagebox-stats__progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pagebox-stats__progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4f46e5 0%, #3b82f6 100%);
+  border-radius: 4px;
+  transition: width 0.25s ease;
+}
+
+/* 列表展示与空状态 */
+.pagebox-stats__empty-msg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: #64748b;
+  font-size: 13px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.pagebox-stats__empty-msg.is-success {
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.pagebox-stats__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pagebox-stats__list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  transition: all 0.15s;
+}
+
+.pagebox-stats__list-item:hover {
+  background: #f1f5f9;
+}
+
+.pagebox-stats__list-item.is-hot {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.pagebox-stats__item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pagebox-stats__item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pagebox-stats__item-url {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pagebox-stats__item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.pagebox-stats__meta-split {
+  color: #cbd5e1;
+}
+
+.pagebox-stats__item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 重复项治理卡片 */
+.pagebox-stats__dup-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pagebox-stats__dup-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fafafa;
+  overflow: hidden;
+}
+
+.pagebox-stats__dup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.pagebox-stats__dup-url {
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 75%;
+}
+
+.pagebox-stats__dup-items {
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pagebox-stats__dup-subitem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.pagebox-stats__dup-idx {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.pagebox-stats__dup-title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #1e293b;
+}
+
+.pagebox-stats__dup-folder {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* 双列网格 */
+.pagebox-stats__grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.pagebox-stats__folder-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #334155;
+}
+
+.pagebox-stats__tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pagebox-stats__metric-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pagebox-stats__metric-big {
+  font-size: 32px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.pagebox-stats__metric-sub {
+  font-size: 15px;
+  font-weight: 500;
+  color: #64748b;
+  margin-left: 8px;
+}
+
+.pagebox-stats__metric-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+/* Top 域名条形分布 */
+.pagebox-stats__bars-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pagebox-stats__bar-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.pagebox-stats__bar-row:hover {
+  background: #f8fafc;
+}
+
+.pagebox-stats__bar-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 180px;
+  flex-shrink: 0;
+}
+
+.pagebox-stats__bar-idx {
+  font-size: 12px;
+  font-weight: 700;
+  color: #94a3b8;
+  width: 16px;
+}
+
+.pagebox-stats__bar-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pagebox-stats__bar-track {
+  flex: 1;
+  height: 10px;
+  background: #f1f5f9;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.pagebox-stats__bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.3s ease;
+}
+
+.pagebox-stats__bar-val {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 90px;
+  justify-content: flex-end;
+  font-size: 12px;
+}
+
+.pagebox-stats__bar-count {
+  font-weight: 700;
+  color: #334155;
+}
+
+.pagebox-stats__bar-pct {
+  color: #94a3b8;
+}
+
+/* 文件夹条形柱 */
+.pagebox-stats__folder-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pagebox-stats__folder-bar-item {
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.pagebox-stats__folder-bar-item:hover {
+  background: #f8fafc;
+}
+
+.pagebox-stats__fbar-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.pagebox-stats__fbar-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.pagebox-stats__fbar-count {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.pagebox-stats__fbar-track {
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.pagebox-stats__fbar-fill {
+  height: 100%;
+  background: #f59e0b;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* 月度走势柱状图 */
+.pagebox-stats__chart-container {
+  padding: 10px 0;
+}
+
+.pagebox-stats__histogram {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 140px;
+  padding-top: 24px;
+  gap: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.pagebox-stats__histo-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  position: relative;
+}
+
+.pagebox-stats__histo-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4f46e5;
+  margin-bottom: 4px;
+}
+
+.pagebox-stats__histo-bar-wrap {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.pagebox-stats__histo-bar {
+  width: 24px;
+  max-width: 100%;
+  background: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%);
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+  transition: height 0.3s ease;
+}
+
+.pagebox-stats__histo-col:hover .pagebox-stats__histo-bar {
+  background: #4338ca;
+}
+
+.pagebox-stats__histo-label {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 8px;
+  white-space: nowrap;
+}
+
+/* 活跃度与常读榜组件 */
+.pagebox-stats__rank-badge {
+  font-size: 16px;
+  font-weight: 800;
+  color: #475569;
+  width: 28px;
+  text-align: center;
+}
+
+.pagebox-stats__hot-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #ea580c;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  background: #fff7ed;
+  border-radius: 12px;
+  border: 1px solid #ffedd5;
+}
+
+.pagebox-stats__time-ago {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.pagebox-stats__icon-fire {
+  color: #ea580c;
+}
+
+.pagebox-stats__icon-warn {
+  color: #f59e0b;
+}
+
+.pagebox-stats__stale-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pagebox-stats__more-hint {
+  text-align: center;
+  font-size: 12px;
+  color: #94a3b8;
+  padding: 10px;
+}
+
+/* 辅助徽章与按钮类 */
+.pagebox-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  line-height: 1.4;
+}
+
+.pagebox-badge--success {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.pagebox-badge--info {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.pagebox-badge--warning {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.pagebox-badge--danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.pagebox-badge--muted {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.pagebox-btn--danger {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+.pagebox-btn--danger:hover {
+  background: #fecaca;
+  color: #b91c1c;
+}
+
+.pagebox-btn--sm {
+  padding: 4px 9px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+.pagebox-btn-icon--danger {
+  color: #ef4444;
+}
+
+.pagebox-btn-icon--danger:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+@keyframes pageboxSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pagebox-spin {
+  animation: pageboxSpin 1s linear infinite;
+}
+
+
 
 
