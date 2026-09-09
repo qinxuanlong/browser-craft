@@ -11,7 +11,7 @@ export default defineConfig({
   manifest: {
     name: "PageBox — 标签页收藏",
     description: "收藏、搜索、恢复浏览器标签页与窗口",
-    version: "0.0.2",
+    version: "0.0.3",
     permissions: ["tabs", "storage", "sidePanel", "bookmarks", "favicon", "history"],
     host_permissions: ["https://api.lemonsqueezy.com/*", "*://*/*"],
     web_accessible_resources: [

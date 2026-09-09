@@ -262,7 +262,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
             <div className="pagebox-settings-item__action">
               <div className="pagebox-settings-meta">
-                <span className="pagebox-badge">v0.0.2</span>
+                <span className="pagebox-badge">v0.0.3</span>
               </div>
             </div>
           </div>
