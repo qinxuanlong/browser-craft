@@ -1,0 +1,13 @@
+name = "pagebox-license-worker"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# 环境变量配置
+[vars]
+GIST_RAW_URL = "https://gist.githubusercontent.com/qinxuanlong/8910a3bc5996b388a4757230a6ddd889/raw/valid_hashes"
+
+# KV 命名空间绑定 (执行 npx wrangler kv:namespace create REDEEMED_KEYS 获取 id 并填入)
+[[kv_namespaces]]
+binding = "REDEEMED_KEYS"
+id = "<YOUR_KV_NAMESPACE_ID>"
+# preview_id = "<YOUR_PREVIEW_KV_NAMESPACE_ID>"

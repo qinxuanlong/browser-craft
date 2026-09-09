@@ -1,0 +1,11 @@
+{
+  "name": "@workspace/license-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地卡密批量生成与哈希库维护工具",
+  "scripts": {
+    "gen:pagebox": "node generate_keys.js pagebox 100 PB",
+    "gen:tree-reader": "node generate_keys.js tree_reader 100 TR",
+    "gen:bundle": "node generate_keys.js all_access_bundle 100 ALL"
+  }
+}

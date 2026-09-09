@@ -111,11 +111,11 @@ export function LicenseModal({ isOpen, onClose }: LicenseModalProps) {
                     </span>
                   </div>
                 )}
-                {licenseInfo.instanceName && (
+                {(licenseInfo.instanceName || licenseInfo.deviceId) && (
                   <div className="pagebox-license-info-row">
                     <span className="pagebox-license-info-label">{t.license.currentDeviceLabel}</span>
                     <span className="pagebox-license-info-value">
-                      {licenseInfo.instanceName}
+                      {licenseInfo.instanceName || `设备-${licenseInfo.deviceId?.slice(0, 8).toUpperCase()}`}
                     </span>
                   </div>
                 )}

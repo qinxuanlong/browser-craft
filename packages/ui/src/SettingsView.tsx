@@ -37,7 +37,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   return (
     <div className="pagebox-settings-view">
-      {/* 头部标题区域 */}
+      <div className="pagebox-settings-container">
+        {/* 头部标题区域 */}
       <div className="pagebox-settings-header">
         <div className="pagebox-settings-header__icon">
           <SettingsIcon size={24} />
@@ -290,5 +291,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </section>
       </div>
     </div>
+  </div>
   );
 };
