@@ -7,6 +7,7 @@ import {
   ChartBarIcon,
   ChevronRight,
   CloseIcon,
+  CopyIcon,
   CrownIcon,
   ExternalLinkIcon,
   FolderYellowIcon,
@@ -15,6 +16,7 @@ import {
   MoonIcon,
   PageBoxLogo,
   PlusIcon,
+  SearchIcon,
   SettingsIcon,
   SunIcon,
   ThisPcIcon,
@@ -23,6 +25,7 @@ import {
   UnfoldMoreIcon,
   WindowGroupIcon,
 } from "./icons";
+import { copyToClipboard, formatTabToMarkdown, formatTabsToMarkdown } from "./clipboard";
 import { LicenseModal } from "./LicenseModal";
 import { useLicense } from "./useLicense";
 import { StatisticsDashboard } from "./StatisticsDashboard";
@@ -44,6 +47,20 @@ function ManagerAppInner() {
   const [selectedTabIds, setSelectedTabIds] = useState<Set<Id>>(new Set());
   const [status, setStatus] = useState("");
   const sidebarTreeRef = useRef<FolderTreeRef>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Ctrl+K / Cmd+K 快捷聚焦搜索框
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // 拖拽状态
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
@@ -230,6 +247,30 @@ function ManagerAppInner() {
       await chrome.tabs.create({ url: tab.url, active: false });
     }
     showStatus(t.manager.batchOpenedTabs(selected.length));
+  };
+
+  // 批量复制选中的标签为 Markdown 格式分享文本
+  const handleBatchCopyMarkdown = async () => {
+    const selected = displayedTabs.filter((t) => selectedTabIds.has(t.id));
+    if (selected.length === 0) return;
+    const text = formatTabsToMarkdown(selected);
+    const ok = await copyToClipboard(text);
+    if (ok) {
+      showStatus(t.manager.batchCopyMarkdownSuccess(selected.length));
+    } else {
+      showStatus(t.manager.copyFailed);
+    }
+  };
+
+  // 单条书签复制为 Markdown 格式分享文本
+  const handleCopyTabMarkdown = async (tab: SavedTab) => {
+    const text = formatTabToMarkdown(tab);
+    const ok = await copyToClipboard(text);
+    if (ok) {
+      showStatus(t.manager.copySingleSuccess);
+    } else {
+      showStatus(t.manager.copyFailed);
+    }
   };
 
   // 批量删除选中的标签
@@ -421,8 +462,7 @@ function ManagerAppInner() {
     if (store.tabs.length > 0) {
       md += `## ${t.tree.tabsCount(store.tabs.length)}\n\n`;
       for (const tab of store.tabs) {
-        const noteText = tab.notes ? ` —— *${tab.notes}*` : "";
-        md += `- [${tab.title || tab.url}](${tab.url})${noteText}\n`;
+        md += `${formatTabToMarkdown(tab)}\n`;
       }
       md += "\n";
     }
@@ -482,12 +522,18 @@ function ManagerAppInner() {
         </div>
 
         <div className="pagebox-manager__search-box">
+          <SearchIcon size={15} className="pagebox-manager__search-icon" />
           <input
+            ref={searchInputRef}
             type="search"
             placeholder={t.search.managerPlaceholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+          <div className="pagebox-manager__search-shortcut">
+            <kbd>Ctrl</kbd>
+            <kbd>K</kbd>
+          </div>
         </div>
 
         <div className="pagebox-manager__top-actions">
@@ -548,19 +594,6 @@ function ManagerAppInner() {
               <ChartBarIcon size={16} />
               <span className="pagebox-sidebar__nav-label">{t.sidebar.statistics}</span>
               <span className="pagebox-sidebar__nav-badge">{tabs.length}</span>
-            </button>
-
-            <button
-              className={`pagebox-sidebar__nav-item ${
-                activeNav === "uncategorized" ? "is-active" : ""
-              }`}
-              onClick={() => setActiveNav("uncategorized")}
-            >
-              <span className="pagebox-tree-icon">📁</span>
-              <span className="pagebox-sidebar__nav-label">{t.sidebar.uncategorized}</span>
-              <span className="pagebox-sidebar__nav-badge">
-                {tabs.filter((t) => t.folderId === null).length}
-              </span>
             </button>
 
             <button
@@ -634,7 +667,7 @@ function ManagerAppInner() {
                   ? null
                   : activeNav
               }
-              onSelectFolder={(folderId) => setActiveNav(folderId ?? "uncategorized")}
+              onSelectFolder={(folderId) => setActiveNav(folderId ?? "all")}
               onCreateFolder={(parentId) => handleOpenCreateFolderModal(parentId)}
               onRenameFolder={handleOpenRename}
               onDeleteFolder={handleDeleteFolder}
@@ -748,6 +781,14 @@ function ManagerAppInner() {
                     onClick={handleBatchOpen}
                   >
                     {t.manager.openSelected}
+                  </button>
+                  <button
+                    className="pagebox-btn pagebox-btn--sm"
+                    onClick={handleBatchCopyMarkdown}
+                    title={t.manager.batchCopyMarkdownTitle}
+                  >
+                    <CopyIcon size={13} />
+                    <span>{t.manager.batchCopyMarkdown}</span>
                   </button>
                   <div className="pagebox-batch-bar__move">
                     <select
@@ -997,6 +1038,13 @@ function ManagerAppInner() {
                                 title={t.manager.openInNewTab}
                               >
                                 {t.manager.open}
+                              </button>
+                              <button
+                                className="pagebox-action-btn"
+                                onClick={() => void handleCopyTabMarkdown(tab)}
+                                title={t.manager.copyMarkdownTitle}
+                              >
+                                {t.manager.copyMarkdown}
                               </button>
                               <button
                                 className="pagebox-action-btn"

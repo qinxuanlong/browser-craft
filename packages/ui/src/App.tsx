@@ -8,21 +8,17 @@ import {
   CloseIcon,
   CrownIcon,
   ExternalLinkIcon,
-  ExportIcon,
-  GlobeIcon,
-  ImportIcon,
-  MoonIcon,
   PageBoxLogo,
   SidebarIcon,
-  SunIcon,
   UnfoldLessIcon,
   UnfoldMoreIcon,
   WindowSaveIcon,
 } from "./icons";
 import { LicenseModal } from "./LicenseModal";
 import { useLicense } from "./useLicense";
+import { copyToClipboard, formatTabToMarkdown } from "./clipboard";
 import { I18nProvider, useTranslation } from "./i18n";
-import { ThemeProvider, useTheme } from "./ThemeContext";
+import { ThemeProvider } from "./ThemeContext";
 import "./styles.css";
 
 export type AppVariant = "popup" | "sidepanel";
@@ -32,8 +28,7 @@ interface PageBoxAppProps {
 }
 
 function PageBoxAppInner({ variant = "popup" }: PageBoxAppProps) {
-  const { toggleLocale, t } = useTranslation();
-  const { resolvedTheme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [tabs, setTabs] = useState<SavedTab[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -98,6 +93,16 @@ function PageBoxAppInner({ variant = "popup" }: PageBoxAppProps) {
     showStatus(t.manager.restoredTabs(win.tabs.length));
   };
 
+  const handleCopyTab = async (tab: SavedTab) => {
+    const text = formatTabToMarkdown(tab);
+    const ok = await copyToClipboard(text);
+    if (ok) {
+      showStatus(t.manager.copySingleSuccess);
+    } else {
+      showStatus(t.manager.copyFailed);
+    }
+  };
+
   const handleDeleteTab = async (tab: SavedTab) => {
     await pageBoxService.deleteTab(tab.id);
     showStatus(t.manager.deleted);
@@ -108,38 +113,6 @@ function PageBoxAppInner({ variant = "popup" }: PageBoxAppProps) {
     await pageBoxService.deleteWindow(win.id);
     showStatus(t.manager.deleted);
     await refresh();
-  };
-
-  const handleExport = async () => {
-    const data = await pageBoxService.exportData();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pagebox-export-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showStatus(t.popup.exportSuccess);
-  };
-
-  const handleImport = async () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "application/json,.json";
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const data = JSON.parse(text);
-        await pageBoxService.importData(data, true);
-        showStatus(t.popup.importSuccess);
-        await refresh();
-      } catch {
-        showStatus(t.popup.importFailed);
-      }
-    };
-    input.click();
   };
 
   const openNotes = (tab: SavedTab) => {
@@ -192,6 +165,7 @@ function PageBoxAppInner({ variant = "popup" }: PageBoxAppProps) {
         </div>
 
         <div className="pagebox-header__actions">
+          {/* 保存当前标签页（主要高频操作） */}
           <button
             type="button"
             className="pagebox-header-btn pagebox-header-btn--primary"
@@ -201,6 +175,7 @@ function PageBoxAppInner({ variant = "popup" }: PageBoxAppProps) {
           >
             <BookmarkPlusIcon size={14} />
           </button>
+          {/* 保存当前窗口所有标签页 */}
           <button
             type="button"
             className="pagebox-header-btn"
@@ -211,43 +186,7 @@ function PageBoxAppInner({ variant = "popup" }: PageBoxAppProps) {
             <WindowSaveIcon size={14} />
           </button>
           <div className="pagebox-header__divider" />
-          <button
-            type="button"
-            className="pagebox-header-btn"
-            onClick={handleExport}
-            title={t.header.exportBackupTitle}
-            aria-label={t.header.exportBackupTitle}
-          >
-            <ExportIcon size={14} />
-          </button>
-          <button
-            type="button"
-            className="pagebox-header-btn"
-            onClick={handleImport}
-            title={t.header.importBackupTitle}
-            aria-label={t.header.importBackupTitle}
-          >
-            <ImportIcon size={14} />
-          </button>
-          <button
-            type="button"
-            className="pagebox-header-btn"
-            onClick={toggleLocale}
-            title={t.header.switchLangTitle}
-            aria-label={t.header.switchLangTitle}
-          >
-            <GlobeIcon size={14} />
-          </button>
-          <button
-            type="button"
-            className="pagebox-header-btn"
-            onClick={toggleTheme}
-            title={resolvedTheme === "dark" ? t.settings.themeLight : t.settings.themeDark}
-            aria-label={resolvedTheme === "dark" ? t.settings.themeLight : t.settings.themeDark}
-          >
-            {resolvedTheme === "dark" ? <SunIcon size={14} /> : <MoonIcon size={14} />}
-          </button>
-          <div className="pagebox-header__divider" />
+          {/* 在新标签页打开后台管理页面（支持完整导入导出与系统设置） */}
           <button
             type="button"
             className="pagebox-header-btn pagebox-header-btn--highlight"
@@ -257,6 +196,7 @@ function PageBoxAppInner({ variant = "popup" }: PageBoxAppProps) {
           >
             <ExternalLinkIcon size={14} />
           </button>
+          {/* Popup 视图支持一键切换展开侧边栏 */}
           {variant === "popup" && (
             <button
               type="button"
@@ -359,6 +299,12 @@ function PageBoxAppInner({ variant = "popup" }: PageBoxAppProps) {
                     {tab.notes && <div className="pagebox-item__notes">{tab.notes}</div>}
                   </div>
                   <div className="pagebox-item__actions" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => void handleCopyTab(tab)}
+                      title={t.manager.copyMarkdownTitle}
+                    >
+                      {t.common.copy}
+                    </button>
                     <button onClick={() => openNotes(tab)}>{t.common.notes}</button>
                     <button onClick={() => handleDeleteTab(tab)}>{t.common.delete}</button>
                   </div>
@@ -372,6 +318,7 @@ function PageBoxAppInner({ variant = "popup" }: PageBoxAppProps) {
                 windows={windows}
                 mode="full"
                 onRestoreTab={handleRestoreTab}
+                onCopyTab={handleCopyTab}
                 onDeleteTab={handleDeleteTab}
                 onOpenNotes={openNotes}
                 onRestoreWindow={handleRestoreWindow}

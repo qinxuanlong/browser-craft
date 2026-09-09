@@ -14,3 +14,4 @@ export { SettingsView } from "./SettingsView";
 export type { SettingsViewProps } from "./SettingsView";
 export * from "./i18n";
 export * from "./ThemeContext";
+export * from "./clipboard";

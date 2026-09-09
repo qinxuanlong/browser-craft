@@ -12,6 +12,7 @@ import type { Folder, SavedTab, SavedWindow } from "@pagebox/types";
 import {
   ChevronDown,
   ChevronRight,
+  EditPencilIcon,
   FolderOpenYellowIcon,
   FolderYellowIcon,
   PlusIcon,
@@ -42,6 +43,7 @@ export interface FolderTreeProps {
   defaultExpandDepth?: number;
   onSelectFolder?: (folderId: string | null) => void;
   onRestoreTab?: (tab: SavedTab) => void;
+  onCopyTab?: (tab: SavedTab) => void;
   onDeleteTab?: (tab: SavedTab) => void;
   onOpenNotes?: (tab: SavedTab) => void;
   onRestoreWindow?: (win: SavedWindow) => void;
@@ -63,12 +65,14 @@ function TabRow({
   tab,
   depth,
   onRestoreTab,
+  onCopyTab,
   onDeleteTab,
   onOpenNotes,
 }: {
   tab: SavedTab;
   depth: number;
   onRestoreTab?: (tab: SavedTab) => void;
+  onCopyTab?: (tab: SavedTab) => void;
   onDeleteTab?: (tab: SavedTab) => void;
   onOpenNotes?: (tab: SavedTab) => void;
 }) {
@@ -92,6 +96,11 @@ function TabRow({
         {tab.notes && <div className="pagebox-tree-item__notes">{tab.notes}</div>}
       </div>
       <div className="pagebox-tree-item__actions" onClick={(e) => e.stopPropagation()}>
+        {onCopyTab && (
+          <button type="button" onClick={() => onCopyTab(tab)} title={t.manager.copyMarkdownTitle}>
+            {t.common.copy}
+          </button>
+        )}
         {onOpenNotes && (
           <button type="button" onClick={() => onOpenNotes(tab)} title={t.tree.notes}>
             {t.tree.notes}
@@ -151,6 +160,7 @@ function FolderNode({
   onToggle,
   onSelectFolder,
   onRestoreTab,
+  onCopyTab,
   onDeleteTab,
   onOpenNotes,
   onRestoreWindow,
@@ -169,6 +179,7 @@ function FolderNode({
   onToggle: (folderId: string) => void;
   onSelectFolder?: (folderId: string | null) => void;
   onRestoreTab?: (tab: SavedTab) => void;
+  onCopyTab?: (tab: SavedTab) => void;
   onDeleteTab?: (tab: SavedTab) => void;
   onOpenNotes?: (tab: SavedTab) => void;
   onRestoreWindow?: (win: SavedWindow) => void;
@@ -316,7 +327,7 @@ function FolderNode({
               onClick={() => onRenameFolder(node.folder)}
               title={t.tree.rename}
             >
-              ✎
+              <EditPencilIcon size={11} />
             </button>
           )}
           {onDeleteFolder && !isRoot && (
@@ -346,6 +357,7 @@ function FolderNode({
               onToggle={onToggle}
               onSelectFolder={onSelectFolder}
               onRestoreTab={onRestoreTab}
+              onCopyTab={onCopyTab}
               onDeleteTab={onDeleteTab}
               onOpenNotes={onOpenNotes}
               onRestoreWindow={onRestoreWindow}
@@ -376,6 +388,7 @@ function FolderNode({
                   tab={tab}
                   depth={depth + 1}
                   onRestoreTab={onRestoreTab}
+                  onCopyTab={onCopyTab}
                   onDeleteTab={onDeleteTab}
                   onOpenNotes={onOpenNotes}
                 />
@@ -398,6 +411,7 @@ export const FolderTree = forwardRef<FolderTreeRef, FolderTreeProps>(function Fo
     defaultExpandDepth = 1,
     onSelectFolder,
     onRestoreTab,
+    onCopyTab,
     onDeleteTab,
     onOpenNotes,
     onRestoreWindow,
@@ -497,6 +511,7 @@ export const FolderTree = forwardRef<FolderTreeRef, FolderTreeProps>(function Fo
           onToggle={toggleFolder}
           onSelectFolder={onSelectFolder}
           onRestoreTab={onRestoreTab}
+          onCopyTab={onCopyTab}
           onDeleteTab={onDeleteTab}
           onOpenNotes={onOpenNotes}
           onRestoreWindow={onRestoreWindow}
@@ -565,6 +580,7 @@ export const FolderTree = forwardRef<FolderTreeRef, FolderTreeProps>(function Fo
                   tab={tab}
                   depth={0}
                   onRestoreTab={onRestoreTab}
+                  onCopyTab={onCopyTab}
                   onDeleteTab={onDeleteTab}
                   onOpenNotes={onOpenNotes}
                 />

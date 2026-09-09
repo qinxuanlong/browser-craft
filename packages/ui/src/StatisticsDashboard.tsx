@@ -502,13 +502,34 @@ export function StatisticsDashboard({
       {/* 顶部概览指标与健康评分 */}
       <div className="pagebox-stats__hero">
         <div className="pagebox-stats__score-card">
-          <div className="pagebox-stats__score-circle">
-            <span className="pagebox-stats__score-val">{healthScore}</span>
-            <span className="pagebox-stats__score-unit">{t.statistics.scoreUnit}</span>
+          <div className="pagebox-stats__score-ring-wrap">
+            <svg className="pagebox-stats__score-ring" width="88" height="88" viewBox="0 0 88 88">
+              <circle
+                className="pagebox-stats__score-ring-bg"
+                cx="44"
+                cy="44"
+                r="34"
+                strokeWidth="6"
+              />
+              <circle
+                className="pagebox-stats__score-ring-progress"
+                cx="44"
+                cy="44"
+                r="34"
+                strokeWidth="6"
+                strokeDasharray={213.6}
+                strokeDashoffset={213.6 - (213.6 * Math.min(100, Math.max(0, healthScore))) / 100}
+                transform="rotate(-90 44 44)"
+              />
+            </svg>
+            <div className="pagebox-stats__score-center">
+              <span className="pagebox-stats__score-val">{healthScore}</span>
+              <span className="pagebox-stats__score-unit">{t.statistics.scoreUnit}</span>
+            </div>
           </div>
           <div className="pagebox-stats__score-info">
             <div className="pagebox-stats__score-title">
-              {t.statistics.healthScoreTitle}
+              <span>{t.statistics.healthScoreTitle}</span>
               {healthScore >= 90 ? (
                 <span className="pagebox-badge pagebox-badge--success">{t.statistics.ratingExcellent}</span>
               ) : healthScore >= 75 ? (
