@@ -8,7 +8,6 @@ import {
   ChevronRight,
   CloseIcon,
   CopyIcon,
-  CrownIcon,
   ExternalLinkIcon,
   FolderYellowIcon,
   GlobeIcon,
@@ -26,10 +25,9 @@ import {
   WindowGroupIcon,
 } from "./icons";
 import { copyToClipboard, formatTabToMarkdown, formatTabsToMarkdown } from "./clipboard";
-import { LicenseModal } from "./LicenseModal";
-import { useLicense } from "./useLicense";
 import { StatisticsDashboard } from "./StatisticsDashboard";
 import { SettingsView } from "./SettingsView";
+import { SponsorModal } from "./SponsorModal";
 import { I18nProvider, useTranslation } from "./i18n";
 import { ThemeProvider, useTheme } from "./ThemeContext";
 import "./styles.css";
@@ -81,9 +79,7 @@ function ManagerAppInner() {
   const [notesDraft, setNotesDraft] = useState("");
 
   const [moveTargetTabId, setMoveTargetTabId] = useState<Id | null>(null);
-  const [licenseModalOpen, setLicenseModalOpen] = useState(false);
-
-  const { isPro } = useLicense();
+  const [sponsorModalOpen, setSponsorModalOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     const store = await pageBoxService.getStore();
@@ -412,14 +408,9 @@ function ManagerAppInner() {
   };
 
   /**
-   * Pro 特权：一键检测并清理重复的标签页
+   * 一键检测并清理重复的标签页
    */
   const handleCleanDuplicates = async () => {
-    if (!isPro) {
-      setLicenseModalOpen(true);
-      return;
-    }
-
     const seenUrls = new Set<string>();
     const duplicates: SavedTab[] = [];
     for (const tab of tabs) {
@@ -448,14 +439,9 @@ function ManagerAppInner() {
   };
 
   /**
-   * Pro 特权：导出为结构化 Markdown 文档
+   * 导出为结构化 Markdown 文档
    */
   const handleExportMarkdown = async () => {
-    if (!isPro) {
-      setLicenseModalOpen(true);
-      return;
-    }
-
     const store = await pageBoxService.getStore();
     let md = `# PageBox ${t.manager.exportMarkdown}\n\n> ${new Date().toLocaleString()}\n\n`;
 
@@ -498,27 +484,6 @@ function ManagerAppInner() {
         <div className="pagebox-manager__brand">
           <PageBoxLogo size={26} className="pagebox-manager__logo" />
           <h1 className="pagebox-manager__title">{t.header.managerTitle}</h1>
-          {isPro ? (
-            <button
-              type="button"
-              className="pagebox-pro-badge pagebox-pro-badge--active"
-              onClick={() => setLicenseModalOpen(true)}
-              title={t.header.proActiveTitle}
-            >
-              <CrownIcon size={12} />
-              <span>{t.header.proBadge}</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="pagebox-pro-badge pagebox-pro-badge--upgrade"
-              onClick={() => setLicenseModalOpen(true)}
-              title={t.header.upgradeProTitle}
-            >
-              <CrownIcon size={12} />
-              <span>{t.header.upgradePro}</span>
-            </button>
-          )}
         </div>
 
         <div className="pagebox-manager__search-box">
@@ -552,6 +517,15 @@ function ManagerAppInner() {
             title={t.sidebar.settings}
           >
             <SettingsIcon size={14} /> {t.sidebar.settings}
+          </button>
+          <button
+            type="button"
+            className="pagebox-btn pagebox-btn--coffee-header"
+            onClick={() => setSponsorModalOpen(true)}
+            title={t.header.coffeeTitle}
+          >
+            <span className="pagebox-coffee-icon">☕</span>
+            <span className="pagebox-coffee-text">{t.header.coffeeBtn}</span>
           </button>
           <button
             type="button"
@@ -743,8 +717,6 @@ function ManagerAppInner() {
                 setQuery(term);
               }}
               showStatus={showStatus}
-              isPro={isPro}
-              onOpenLicense={() => setLicenseModalOpen(true)}
             />
           ) : activeNav === "settings" ? (
             <SettingsView
@@ -754,8 +726,6 @@ function ManagerAppInner() {
               onImportJson={handleImport}
               duplicateCount={duplicateCount}
               totalTabsCount={tabs.length}
-              isPro={isPro}
-              onOpenLicenseModal={() => setLicenseModalOpen(true)}
             />
           ) : (
             <>
@@ -1280,9 +1250,9 @@ function ManagerAppInner() {
         </div>
       )}
 
-      <LicenseModal
-        isOpen={licenseModalOpen}
-        onClose={() => setLicenseModalOpen(false)}
+      <SponsorModal
+        isOpen={sponsorModalOpen}
+        onClose={() => setSponsorModalOpen(false)}
       />
     </div>
   );

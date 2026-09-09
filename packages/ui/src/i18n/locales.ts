@@ -40,6 +40,8 @@ export const zhCN = {
     openSidepanelTitle: "在浏览器侧边栏中打开",
     langBtn: "EN",
     switchLangTitle: "Switch to English / 切换语言",
+    coffeeBtn: "打赏",
+    coffeeTitle: "请作者喝杯咖啡 ☕",
   },
   search: {
     popupPlaceholder: "搜索标题、URL、备注、标签…",
@@ -357,6 +359,11 @@ export const zhCN = {
     version: "当前版本",
     privacy: "数据隐私与本地安全",
     privacyDesc: "PageBox 坚持 100% 纯本地运行，不上传、不收集任何浏览数据与书签",
+    sponsorTitle: "支持与赞赏",
+    sponsorDesc: "PageBox 坚持 100% 免费开源与纯本地运行。如果您觉得它提升了您的书签管理效率，欢迎请作者喝杯咖啡支持持续维护！",
+    sponsorBtn: "请作者喝咖啡",
+    sponsorTip: "感谢请作者喝咖啡，祝使用愉快！",
+    sponsorScanTip: "微信扫码赞赏支持",
   },
   popup: {
     emptyTitle: "浏览器书签为空",
@@ -411,6 +418,8 @@ export const enUS: TranslationSchema = {
     openSidepanelTitle: "Open in browser side panel",
     langBtn: "中文",
     switchLangTitle: "Switch to Chinese / 切换为中文",
+    coffeeBtn: "Sponsor",
+    coffeeTitle: "Buy author a coffee ☕",
   },
   search: {
     popupPlaceholder: "Search title, URL, notes, tags…",
@@ -735,6 +744,11 @@ export const enUS: TranslationSchema = {
     version: "Version",
     privacy: "Data Privacy & Local Security",
     privacyDesc: "PageBox runs 100% locally and never uploads or collects your browsing data or bookmarks",
+    sponsorTitle: "Support & Sponsor",
+    sponsorDesc: "PageBox runs 100% locally and completely free. If PageBox improves your bookmark workflow, consider buying the author a cup of coffee!",
+    sponsorBtn: "Buy Coffee",
+    sponsorTip: "Thank you for buying the author a coffee. Enjoy using PageBox!",
+    sponsorScanTip: "Scan with WeChat to sponsor",
   },
   popup: {
     emptyTitle: "No Bookmarks Found",

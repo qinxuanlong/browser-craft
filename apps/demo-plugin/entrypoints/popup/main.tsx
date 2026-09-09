@@ -1,23 +1,13 @@
 import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { getCurrentActiveTab } from "@workspace/shared-utils";
-import { createLicenseService } from "@workspace/shared-license";
-
-const licenseService = createLicenseService({
-  appName: "DemoPlugin",
-  checkoutUrl: "https://example.com/checkout",
-});
 
 function App() {
   const [tabTitle, setTabTitle] = useState<string>("加载中...");
-  const [isPro, setIsPro] = useState(false);
 
   useEffect(() => {
     getCurrentActiveTab().then((tab) => {
       setTabTitle(tab?.title || "未获取到活跃标签页");
-    });
-    licenseService.getLicenseInfo().then((info) => {
-      setIsPro(info.isPro);
     });
   }, []);
 
@@ -32,14 +22,14 @@ function App() {
       <div
         style={{
           padding: 10,
-          background: isPro ? "#ecfdf5" : "#f1f5f9",
-          border: `1px solid ${isPro ? "#a7f3d0" : "#cbd5e1"}`,
+          background: "#ecfdf5",
+          border: "1px solid #a7f3d0",
           borderRadius: 6,
           fontSize: 12,
-          color: isPro ? "#065f46" : "#475569",
+          color: "#065f46",
         }}
       >
-        会员状态：{isPro ? "✅ Pro 已激活" : "⚡ 免费体验版"}
+        版本状态：✨ 全功能版已解锁
       </div>
     </div>
   );

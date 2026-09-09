@@ -3,13 +3,13 @@ import { useTranslation } from "./i18n";
 import { useTheme } from "./ThemeContext";
 import {
   GlobeIcon,
-  CrownIcon,
   MonitorIcon,
   MoonIcon,
   SettingsIcon,
   ShieldCheckIcon,
   SunIcon,
 } from "./icons";
+import { getSponsorImageUrl } from "./SponsorModal";
 
 export interface SettingsViewProps {
   onCleanDuplicates: () => void;
@@ -18,8 +18,6 @@ export interface SettingsViewProps {
   onImportJson: () => void;
   duplicateCount: number;
   totalTabsCount: number;
-  isPro: boolean;
-  onOpenLicenseModal?: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -29,8 +27,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onImportJson,
   duplicateCount,
   totalTabsCount,
-  isPro,
-  onOpenLicenseModal,
 }) => {
   const { t, locale, setLocale } = useTranslation();
   const { themeMode, setThemeMode } = useTheme();
@@ -230,11 +226,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <span className="pagebox-settings-item__label">
                   {t.settings.exportMarkdown}
                 </span>
-                {!isPro && (
-                  <span className="pagebox-pro-badge">
-                    <CrownIcon size={10} /> Pro
-                  </span>
-                )}
               </div>
               <span className="pagebox-settings-item__desc">
                 {t.settings.exportMarkdownDesc}
@@ -271,21 +262,39 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
             <div className="pagebox-settings-item__action">
               <div className="pagebox-settings-meta">
-                <span className="pagebox-badge">v0.0.1</span>
-                {isPro ? (
-                  <span className="pagebox-badge pagebox-badge--pro">
-                    <CrownIcon size={11} /> Pro 终身版
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    className="pagebox-btn pagebox-btn--sm pagebox-btn--upgrade-inline"
-                    onClick={onOpenLicenseModal}
-                  >
-                    <CrownIcon size={12} /> 升级 Pro
-                  </button>
-                )}
+                <span className="pagebox-badge">v0.0.2</span>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 5. 支持与赞赏卡片 */}
+        <section className="pagebox-settings-card pagebox-settings-card--sponsor">
+          <div className="pagebox-settings-card__header">
+            <h2 className="pagebox-settings-card__title">
+              <span>☕ {t.settings.sponsorTitle}</span>
+            </h2>
+          </div>
+
+          <div className="pagebox-settings-sponsor-box">
+            <div className="pagebox-settings-sponsor-info">
+              <p className="pagebox-settings-sponsor-desc">
+                {t.settings.sponsorDesc}
+              </p>
+              <div className="pagebox-settings-sponsor-quote">
+                “感谢请作者喝咖啡，祝使用愉快！”
+              </div>
+            </div>
+
+            <div className="pagebox-settings-sponsor-qr-card">
+              <img
+                src={getSponsorImageUrl()}
+                alt="赞赏码"
+                className="pagebox-settings-sponsor-qr-img"
+              />
+              <span className="pagebox-settings-sponsor-qr-tag">
+                {t.settings.sponsorScanTip}
+              </span>
             </div>
           </div>
         </section>

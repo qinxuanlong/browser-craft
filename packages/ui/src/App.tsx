@@ -6,7 +6,6 @@ import { TabFavicon } from "./Favicon";
 import {
   BookmarkPlusIcon,
   CloseIcon,
-  CrownIcon,
   ExternalLinkIcon,
   PageBoxLogo,
   SidebarIcon,
@@ -14,9 +13,8 @@ import {
   UnfoldMoreIcon,
   WindowSaveIcon,
 } from "./icons";
-import { LicenseModal } from "./LicenseModal";
-import { useLicense } from "./useLicense";
 import { copyToClipboard, formatTabToMarkdown } from "./clipboard";
+import { SponsorModal } from "./SponsorModal";
 import { I18nProvider, useTranslation } from "./i18n";
 import { ThemeProvider } from "./ThemeContext";
 import "./styles.css";
@@ -36,10 +34,8 @@ function PageBoxAppInner({ variant = "popup" }: PageBoxAppProps) {
   const [status, setStatus] = useState("");
   const [notesTarget, setNotesTarget] = useState<SavedTab | null>(null);
   const [notesDraft, setNotesDraft] = useState("");
-  const [licenseModalOpen, setLicenseModalOpen] = useState(false);
+  const [sponsorModalOpen, setSponsorModalOpen] = useState(false);
   const treeRef = useRef<FolderTreeRef>(null);
-
-  const { isPro } = useLicense();
 
   const refresh = useCallback(async () => {
     const store = await pageBoxService.getStore();
@@ -141,27 +137,14 @@ function PageBoxAppInner({ variant = "popup" }: PageBoxAppProps) {
               <h1>PageBox</h1>
             </>
           )}
-          {isPro ? (
-            <button
-              type="button"
-              className="pagebox-pro-badge pagebox-pro-badge--active"
-              onClick={() => setLicenseModalOpen(true)}
-              title={t.header.proActiveTitle}
-            >
-              <CrownIcon size={11} />
-              <span>{t.header.proBadge}</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="pagebox-pro-badge pagebox-pro-badge--upgrade"
-              onClick={() => setLicenseModalOpen(true)}
-              title={t.header.upgradeProTitle}
-            >
-              <CrownIcon size={11} />
-              <span>{t.header.upgradePro}</span>
-            </button>
-          )}
+          <button
+            type="button"
+            className="pagebox-btn pagebox-btn--coffee-mini"
+            onClick={() => setSponsorModalOpen(true)}
+            title={t.header.coffeeTitle}
+          >
+            ☕
+          </button>
         </div>
 
         <div className="pagebox-header__actions">
@@ -370,9 +353,9 @@ function PageBoxAppInner({ variant = "popup" }: PageBoxAppProps) {
         </div>
       )}
 
-      <LicenseModal
-        isOpen={licenseModalOpen}
-        onClose={() => setLicenseModalOpen(false)}
+      <SponsorModal
+        isOpen={sponsorModalOpen}
+        onClose={() => setSponsorModalOpen(false)}
       />
     </div>
   );
