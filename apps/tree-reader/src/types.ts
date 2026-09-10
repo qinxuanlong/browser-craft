@@ -1,5 +1,5 @@
 /**
- * PageBox 目录速览核心数据结构与契约定义
+ * TreeReader 树读核心数据结构与契约定义
  */
 
 export type FileCategory = "markdown" | "code" | "text" | "unknown";

@@ -29,7 +29,7 @@ export default defineContentScript({
       ? preElement.textContent || ""
       : document.body?.innerText || "";
 
-    const openInPageBox = async (rememberAutoOpen: boolean) => {
+    const openInTreeReader = async (rememberAutoOpen: boolean) => {
       try {
         if (rememberAutoOpen) {
           await chrome.storage.local.set({ autoOpenLocalFiles: true });
@@ -49,24 +49,24 @@ export default defineContentScript({
           },
         });
 
-        // 平滑重定向当前标签页至 PageBox 目录速览大屏
+        // 平滑重定向当前标签页至 TreeReader 树读大屏
         window.location.replace(
           chrome.runtime.getURL("reader.html?fromLocalFile=1")
         );
       } catch (err) {
-        console.error("唤起 PageBox 目录速览失败:", err);
+        console.error("唤起 TreeReader 树读失败:", err);
       }
     };
 
     // 检查是否已开启“默认自动打开”偏好
     chrome.storage.local.get(["autoOpenLocalFiles"]).then((res) => {
       if (res.autoOpenLocalFiles) {
-        void openInPageBox(false);
+        void openInTreeReader(false);
         return;
       }
 
       // 未开启自动跳转时，在页面右上角渲染精致悬浮引导条
-      renderFloatingBar(fileName, openInPageBox);
+      renderFloatingBar(fileName, openInTreeReader);
     });
   },
 });
@@ -205,7 +205,7 @@ function renderFloatingBar(
     <div class="pbox-header">
       <div class="pbox-title-wrap">
         <span class="pbox-icon">📖</span>
-        <span>PageBox 目录速览</span>
+        <span>TreeReader 树读</span>
       </div>
       <button class="pbox-close-btn" title="关闭">×</button>
     </div>

@@ -17,6 +17,7 @@
     "submit:pagebox:edge": "pnpm --filter @apps/pagebox submit:edge",
     "zip:demo": "turbo zip --filter=@apps/demo-plugin",
     "zip:reader": "turbo zip --filter=@apps/tree-reader",
+    "zip:reader:edge": "pnpm --filter @apps/tree-reader zip:edge",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck"
   },

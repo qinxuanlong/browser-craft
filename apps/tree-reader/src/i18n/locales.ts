@@ -85,7 +85,7 @@ export const zhCN = {
     editorPlaceholder: "在此输入或编辑内容...",
   },
   welcome: {
-    title: "PageBox — 目录速览",
+    title: "TreeReader — 树读",
     subtitle: "专为本地多级目录树、结构化文本与代码打造的极速查看器",
     openBtn: "打开本地文件夹",
     dragHint: "或直接将本地文件夹拖入浏览器窗口",
@@ -105,15 +105,15 @@ export const zhCN = {
     externalSyncNotice: "外部修改已同步",
   },
   fileScheme: {
-    permissionNotice: "提示：开启「允许访问文件网址」后，将本地文件直接拖入 Chrome 即可自动用 PageBox 速览查看",
+    permissionNotice: "提示：开启「允许访问文件网址」后，将本地文件直接拖入 Chrome 即可自动用 TreeReader 速览查看",
     copyUrlBtn: "复制管理地址",
     copied: "已复制",
     allowedStatus: "已开启直接拖入支持",
   },
   fileBar: {
-    title: "PageBox 目录速览",
+    title: "TreeReader 树读",
     openBtn: "进入大屏速览",
-    autoOpenCheckbox: "总是自动用 PageBox 打开本地文本",
+    autoOpenCheckbox: "总是自动用 TreeReader 打开本地文本",
   },
 };
 
@@ -200,7 +200,7 @@ export const enUS: typeof zhCN = {
     editorPlaceholder: "Type or edit content here...",
   },
   welcome: {
-    title: "PageBox — TreeReader",
+    title: "TreeReader — 树读",
     subtitle: "Lightning-fast viewer for local directory trees, structured docs, and code",
     openBtn: "Open Local Folder",
     dragHint: "Or drag & drop a local folder directly into this window",
@@ -221,15 +221,15 @@ export const enUS: typeof zhCN = {
     externalSyncNotice: "External changes synced",
   },
   fileScheme: {
-    permissionNotice: "Tip: Enable 'Allow access to file URLs' to automatically open local files in PageBox when dragging into Chrome",
+    permissionNotice: "Tip: Enable 'Allow access to file URLs' to automatically open local files in TreeReader when dragging into Chrome",
     copyUrlBtn: "Copy Settings URL",
     copied: "Copied",
     allowedStatus: "Direct drag & drop supported",
   },
   fileBar: {
-    title: "PageBox TreeReader",
-    openBtn: "Open in PageBox",
-    autoOpenCheckbox: "Always auto-open local text in PageBox",
+    title: "TreeReader",
+    openBtn: "Open in TreeReader",
+    autoOpenCheckbox: "Always auto-open local text in TreeReader",
   },
 };
 
