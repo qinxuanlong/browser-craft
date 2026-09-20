@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Skill } from "../types";
-import { getAllSkills, getSettings } from "../services/storage";
+import { getAllSkills } from "../services/storage";
 import { injectTextIntoElement } from "../services/platformAdapters";
 import { extractVariables } from "../services/variableParser";
 import { getCaretCoordinates } from "../utils/caretCoordinates";
@@ -16,7 +16,9 @@ export const PromptCraftRoot: React.FC = () => {
   // 1. 斜杠就地补全状态
   const [isSlashOpen, setIsSlashOpen] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
+  const [slashPrefix, setSlashPrefix] = useState("/");
   const [slashPos, setSlashPos] = useState({ top: 0, left: 0 });
+  const [activeInputRect, setActiveInputRect] = useState<DOMRect | null>(null);
 
   // 2. 全局调色板状态 (Alt+P)
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
@@ -38,7 +40,6 @@ export const PromptCraftRoot: React.FC = () => {
   useEffect(() => {
     void refreshSkills();
 
-    // 侦听 storage 变化实时热更新技能
     const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }) => {
       if (changes.promptcraft_skills) {
         setSkills(changes.promptcraft_skills.newValue || []);
@@ -49,23 +50,25 @@ export const PromptCraftRoot: React.FC = () => {
     return () => chrome.storage.onChanged.removeListener(handleStorageChange);
   }, [refreshSkills]);
 
-  // 更新输入框悬浮胶囊位置
+  // 更新输入框悬浮胶囊位置（使用视窗 fixed 坐标系）
   const updateCapsulePosition = useCallback((el: HTMLElement | null) => {
     if (!el || !document.contains(el)) {
       setCapsulePos(null);
+      setActiveInputRect(null);
       return;
     }
 
     const rect = el.getBoundingClientRect();
     if (rect.width === 0 && rect.height === 0) {
       setCapsulePos(null);
+      setActiveInputRect(null);
       return;
     }
 
-    // 定位在输入框右上方偏外侧
+    setActiveInputRect(rect);
     setCapsulePos({
-      top: rect.top + window.scrollY - 24,
-      left: Math.max(10, rect.right + window.scrollX - 70),
+      top: rect.top - 28,
+      left: Math.max(10, rect.right - 70),
     });
   }, []);
 
@@ -134,7 +137,7 @@ export const PromptCraftRoot: React.FC = () => {
         target instanceof HTMLTextAreaElement ||
         target instanceof HTMLInputElement
       ) {
-        const pos = target.selectionStart || 0;
+        const pos = target.selectionStart ?? target.value.length;
         textBeforeCursor = target.value.substring(0, pos);
       } else if (target.isContentEditable) {
         const sel = window.getSelection();
@@ -146,18 +149,27 @@ export const PromptCraftRoot: React.FC = () => {
         }
       }
 
-      // 匹配是否输入了触发词（以 "/" 开头，后跟可选字符）
-      const lastSlashIndex = textBeforeCursor.lastIndexOf("/");
-      if (lastSlashIndex !== -1) {
-        // 确保斜杠前面是空格、换行或在文本起始位置，避免 URL 中的斜杠如 http://
-        const charBeforeSlash = lastSlashIndex > 0 ? textBeforeCursor[lastSlashIndex - 1] : " ";
-        if (/\s/.test(charBeforeSlash) || lastSlashIndex === 0) {
-          const query = textBeforeCursor.substring(lastSlashIndex + 1);
-          // 若查询词包含空格，则认为输入已结束关闭菜单
-          if (!query.includes(" ") && query.length <= 15) {
+      // 同时支持英文斜杠 "/" 与中文顿号 "、"
+      const slashIndex = textBeforeCursor.lastIndexOf("/");
+      const dunhaoIndex = textBeforeCursor.lastIndexOf("、");
+      const triggerIndex = Math.max(slashIndex, dunhaoIndex);
+
+      if (triggerIndex !== -1) {
+        const triggerChar = textBeforeCursor[triggerIndex];
+        const charBefore = triggerIndex > 0 ? textBeforeCursor[triggerIndex - 1] : " ";
+
+        // 确保触发符位于行首、空格或换行后，避免误判 URL 中的斜杠如 http://
+        if (/\s/.test(charBefore) || triggerIndex === 0) {
+          const query = textBeforeCursor.substring(triggerIndex + 1);
+          // 若查询词未包含换行或空格，且长度适中，则唤起联想
+          if (!query.includes(" ") && !query.includes("\n") && query.length <= 15) {
+            const rect = target.getBoundingClientRect();
+            setActiveInputRect(rect);
+
             const coords = getCaretCoordinates(target);
             setSlashPos({ top: coords.top, left: coords.left });
             setSlashQuery(query);
+            setSlashPrefix(`${triggerChar}${query}`);
             setIsSlashOpen(true);
             return;
           }
@@ -167,24 +179,24 @@ export const PromptCraftRoot: React.FC = () => {
       setIsSlashOpen(false);
     };
 
-    // 3. 键盘按键侦听（处理 Alt+P 全局快捷键与输入框交互）
+    // 3. 键盘按键侦听（处理 Alt+P 全局快捷键）
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 检查 Alt+P 或 Option+P 快捷键
       if (e.altKey && (e.key === "p" || e.key === "P" || e.code === "KeyP")) {
         e.preventDefault();
         e.stopPropagation();
         setIsPaletteOpen((prev) => !prev);
-        return;
       }
     };
 
     window.addEventListener("focusin", handleFocusIn, true);
     window.addEventListener("input", handleInput, true);
+    window.addEventListener("compositionend", handleInput, true);
     window.addEventListener("keydown", handleKeyDown, true);
 
     return () => {
       window.removeEventListener("focusin", handleFocusIn, true);
       window.removeEventListener("input", handleInput, true);
+      window.removeEventListener("compositionend", handleInput, true);
       window.removeEventListener("keydown", handleKeyDown, true);
     };
   }, [updateCapsulePosition]);
@@ -197,7 +209,8 @@ export const PromptCraftRoot: React.FC = () => {
           skills={skills}
           query={slashQuery}
           position={slashPos}
-          onSelect={(skill) => handleSelectSkill(skill, `/${slashQuery}`)}
+          inputRect={activeInputRect}
+          onSelect={(skill) => handleSelectSkill(skill, slashPrefix)}
           onClose={() => setIsSlashOpen(false)}
         />
       )}
@@ -218,7 +231,7 @@ export const PromptCraftRoot: React.FC = () => {
       {pendingSkill && (
         <VariableModal
           skill={pendingSkill}
-          onConfirm={(rendered) => handleExecuteInjection(rendered, "")}
+          onConfirm={(rendered) => handleExecuteInjection(rendered, slashPrefix)}
           onCancel={() => setPendingSkill(null)}
         />
       )}

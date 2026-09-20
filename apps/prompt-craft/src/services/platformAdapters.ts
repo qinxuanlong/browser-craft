@@ -35,12 +35,14 @@ export async function injectTextIntoElement(
       const start = element.selectionStart ?? currentVal.length;
       const end = element.selectionEnd ?? currentVal.length;
 
-      // 检查光标前是否有触发前缀（如 "/"），有则将其替换掉
+      // 检查光标前是否有触发前缀（如 "/" 或 "、"），有则将其替换掉
       let replaceStart = start;
       if (prefixToRemove && start > 0) {
         const textBefore = currentVal.substring(0, start);
         if (textBefore.endsWith(prefixToRemove)) {
           replaceStart = start - prefixToRemove.length;
+        } else if (textBefore.endsWith("/") || textBefore.endsWith("、")) {
+          replaceStart = start - 1;
         }
       }
 

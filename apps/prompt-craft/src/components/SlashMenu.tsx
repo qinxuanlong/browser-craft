@@ -5,6 +5,7 @@ interface SlashMenuProps {
   skills: Skill[];
   query: string;
   position: { top: number; left: number };
+  inputRect?: DOMRect | null;
   onSelect: (skill: Skill) => void;
   onClose: () => void;
 }
@@ -13,6 +14,7 @@ export const SlashMenu: React.FC<SlashMenuProps> = ({
   skills,
   query,
   position,
+  inputRect,
   onSelect,
   onClose,
 }) => {
@@ -21,7 +23,8 @@ export const SlashMenu: React.FC<SlashMenuProps> = ({
 
   // 过滤当前匹配的技能列表
   const filteredSkills = skills.filter((skill) => {
-    const q = query.toLowerCase();
+    const q = query.toLowerCase().replace(/^[\\/、]/, "");
+    if (!q) return true;
     const titleMatch = skill.title.toLowerCase().includes(q);
     const shortcutMatch = skill.shortcut.toLowerCase().includes(q);
     const descMatch = skill.description.toLowerCase().includes(q);
@@ -33,24 +36,32 @@ export const SlashMenu: React.FC<SlashMenuProps> = ({
     setSelectedIndex(0);
   }, [query]);
 
-  // 键盘快捷键侦听
+  // 键盘快捷键侦听（阻止宿主页面如 DeepSeek 误把回车当成发送消息）
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (filteredSkills.length === 0) return;
 
       if (e.key === "ArrowDown") {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         setSelectedIndex((prev) => (prev + 1) % filteredSkills.length);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         setSelectedIndex((prev) => (prev - 1 + filteredSkills.length) % filteredSkills.length);
       } else if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         if (filteredSkills[selectedIndex]) {
           onSelect(filteredSkills[selectedIndex]);
         }
       } else if (e.key === "Escape") {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         onClose();
       }
     };
@@ -73,29 +84,41 @@ export const SlashMenu: React.FC<SlashMenuProps> = ({
     return null;
   }
 
-  // 计算屏幕边界防止弹窗溢出屏幕右侧或下侧
-  const menuWidth = 320;
-  const menuMaxHeight = 280;
+  // 视窗边界自适应
+  const menuWidth = 340;
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
 
   let finalLeft = position.left;
+  if (inputRect && finalLeft < inputRect.left) {
+    finalLeft = inputRect.left + 8;
+  }
   if (finalLeft + menuWidth > viewportWidth - 20) {
     finalLeft = Math.max(10, viewportWidth - menuWidth - 20);
   }
+  if (finalLeft < 10) finalLeft = 10;
 
-  let finalTop = position.top;
-  if (finalTop + menuMaxHeight > viewportHeight + window.scrollY - 20) {
-    finalTop = Math.max(10, position.top - menuMaxHeight - 25);
-  }
+  // 判定是否处于视窗下半区（如 DeepSeek/ChatGPT 底部输入栏）
+  const isBottomChatbox = inputRect ? inputRect.top > 250 : position.top > 250;
+
+  const dynamicStyle: React.CSSProperties = isBottomChatbox
+    ? {
+        position: "fixed",
+        bottom: inputRect
+          ? `${viewportHeight - inputRect.top + 10}px`
+          : `${viewportHeight - position.top + 16}px`,
+        left: `${finalLeft}px`,
+      }
+    : {
+        position: "fixed",
+        top: inputRect ? `${inputRect.bottom + 8}px` : `${position.top + 8}px`,
+        left: `${finalLeft}px`,
+      };
 
   return (
     <div
       className="promptcraft-slash-menu"
-      style={{
-        top: `${finalTop}px`,
-        left: `${finalLeft}px`,
-      }}
+      style={dynamicStyle}
       onMouseDown={(e) => e.preventDefault()} // 防止输入框失去焦点
     >
       <div className="promptcraft-slash-header">
@@ -117,7 +140,7 @@ export const SlashMenu: React.FC<SlashMenuProps> = ({
                 <span className="promptcraft-item-shortcut">{skill.shortcut}</span>
                 <span className="promptcraft-item-name">{skill.title}</span>
                 {skill.isPreset && (
-                  <span className="promptcraft-item-badge">官方预置</span>
+                  <span className="promptcraft-item-badge">预置</span>
                 )}
               </div>
               <div className="promptcraft-item-desc">{skill.description}</div>

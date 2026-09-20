@@ -15,20 +15,20 @@
 
 /* 1. 斜杠就地联想气泡 (SlashMenu) */
 .promptcraft-slash-menu {
-  position: absolute;
+  position: fixed;
   z-index: 2147483646;
-  width: 330px;
+  width: 340px;
   max-height: 300px;
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(226, 232, 240, 0.85);
+  border: 1px solid rgba(226, 232, 240, 0.95);
   border-radius: 12px;
-  box-shadow: 0 12px 30px -6px rgba(0, 0, 0, 0.14), 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.18), 0 4px 14px -2px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: promptcraft-scale-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: promptcraft-scale-in 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes promptcraft-scale-in {
@@ -550,7 +550,7 @@
 
 /* 4. 悬浮快捷胶囊 (FloatingButton) */
 .promptcraft-floating-capsule {
-  position: absolute;
+  position: fixed;
   z-index: 2147483645;
   display: flex;
   align-items: center;
