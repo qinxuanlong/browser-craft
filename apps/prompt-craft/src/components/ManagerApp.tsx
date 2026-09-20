@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Skill, SkillCategory } from "../types";
+import { Skill, SkillCategory, CategoryItem } from "../types";
 import {
   getAllSkills,
   saveSkill,
@@ -7,6 +7,9 @@ import {
   resetToPresets,
   importSkills,
   filterSkills,
+  getAllCategories,
+  saveCategory,
+  deleteCategory,
 } from "../services/storage";
 import {
   exportSkillsToJson,
@@ -18,17 +21,9 @@ import { extractVariables } from "../services/variableParser";
 import { SkillEditor } from "./SkillEditor";
 import { PromptBuilderModal } from "./PromptBuilderModal";
 
-const CATEGORIES: { key: SkillCategory; label: string; icon: string }[] = [
-  { key: "all", label: "全部技能", icon: "🌟" },
-  { key: "office", label: "职场办公", icon: "💼" },
-  { key: "coding", label: "编程开发", icon: "💻" },
-  { key: "writing", label: "文案创作", icon: "✍️" },
-  { key: "learning", label: "学术研读", icon: "📚" },
-  { key: "custom", label: "自定义技能", icon: "🛠️" },
-];
-
 export const ManagerApp: React.FC = () => {
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [activeCategory, setActiveCategory] = useState<SkillCategory>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [editingSkill, setEditingSkill] = useState<Skill | null>(null);
@@ -36,11 +31,17 @@ export const ManagerApp: React.FC = () => {
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // 自定义新建分类状态
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryInput, setNewCategoryInput] = useState("");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = async () => {
     const list = await getAllSkills();
     setSkills(list);
+    const cats = await getAllCategories();
+    setCategories(cats);
   };
 
   useEffect(() => {
@@ -48,6 +49,36 @@ export const ManagerApp: React.FC = () => {
   }, []);
 
   const filteredSkills = filterSkills(skills, searchQuery, activeCategory);
+
+  // 新建自定义分类
+  const handleAddCategory = async () => {
+    if (!newCategoryInput.trim()) return;
+    const updated = await saveCategory(newCategoryInput.trim(), "📁");
+    setCategories(updated);
+    setActiveCategory(newCategoryInput.trim());
+    setNewCategoryInput("");
+    setIsAddingCategory(false);
+  };
+
+  // 删除自定义分类
+  const handleDeleteCategory = async (cat: CategoryItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const count = skills.filter((s) => s.category === cat.name || s.category === cat.id).length;
+    if (count > 0) {
+      if (!confirm(`分类「${cat.name}」下包含 ${count} 个技能，删除分类不会删除技能，确定删除该分类吗？`)) {
+        return;
+      }
+    } else {
+      if (!confirm(`确定删除分类「${cat.name}」吗？`)) {
+        return;
+      }
+    }
+    const updated = await deleteCategory(cat.id);
+    setCategories(updated);
+    if (activeCategory === cat.name || activeCategory === cat.id) {
+      setActiveCategory("all");
+    }
+  };
 
   // 保存技能
   const handleSaveSkill = async (saved: Skill) => {
@@ -65,12 +96,15 @@ export const ManagerApp: React.FC = () => {
     }
   };
 
-  // 恢复出厂预设
+  // 恢复出厂预设（精简 3 套展示预设）
   const handleResetPresets = async () => {
-    if (confirm("恢复出厂预置将覆盖重置所有官方技能，确定继续吗？")) {
+    if (confirm("恢复出厂预置将重置为 3 套精简展示技能与默认分类，确定继续吗？")) {
       const presets = await resetToPresets();
       setSkills(presets);
-      alert("已成功恢复 22 套官方工业级技能！");
+      const cats = await getAllCategories();
+      setCategories(cats);
+      setActiveCategory("all");
+      alert("已成功恢复 3 套官方展示技能！");
     }
   };
 
@@ -166,23 +200,91 @@ export const ManagerApp: React.FC = () => {
         </div>
 
         <nav className="sidebar-nav">
-          <div className="nav-title">分类维度</div>
-          {CATEGORIES.map((cat) => {
-            const count =
-              cat.key === "all"
-                ? skills.length
-                : skills.filter((s) => s.category === cat.key).length;
+          <div className="nav-title-row">
+            <span className="nav-title" style={{ margin: 0 }}>分类维度</span>
+            <button
+              type="button"
+              className="btn-add-category-mini"
+              onClick={() => setIsAddingCategory(true)}
+              title="新建自定义分类"
+            >
+              + 新建
+            </button>
+          </div>
+
+          {/* 行内新建分类输入框 */}
+          {isAddingCategory && (
+            <div className="inline-add-category">
+              <input
+                type="text"
+                placeholder="分类名称 (如：写作、客服)..."
+                value={newCategoryInput}
+                onChange={(e) => setNewCategoryInput(e.target.value)}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void handleAddCategory();
+                  if (e.key === "Escape") setIsAddingCategory(false);
+                }}
+              />
+              <div className="inline-add-category-actions">
+                <button
+                  type="button"
+                  className="btn-category-confirm"
+                  onClick={() => void handleAddCategory()}
+                >
+                  确定
+                </button>
+                <button
+                  type="button"
+                  className="btn-category-cancel"
+                  onClick={() => setIsAddingCategory(false)}
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 全部技能选项 */}
+          <button
+            className={`nav-item ${activeCategory === "all" ? "active" : ""}`}
+            onClick={() => setActiveCategory("all")}
+          >
+            <div className="nav-item-left">
+              <span className="nav-icon">🌟</span>
+              <span className="nav-label">全部技能</span>
+            </div>
+            <span className="nav-count">{skills.length}</span>
+          </button>
+
+          {/* 动态分类列表 */}
+          {categories.map((cat) => {
+            const count = skills.filter(
+              (s) => s.category === cat.name || s.category === cat.id
+            ).length;
+            const isActive = activeCategory === cat.name || activeCategory === cat.id;
             return (
               <button
-                key={cat.key}
-                className={`nav-item ${activeCategory === cat.key ? "active" : ""}`}
-                onClick={() => setActiveCategory(cat.key)}
+                key={cat.id}
+                className={`nav-item ${isActive ? "active" : ""}`}
+                onClick={() => setActiveCategory(cat.name)}
               >
                 <div className="nav-item-left">
-                  <span className="nav-icon">{cat.icon}</span>
-                  <span className="nav-label">{cat.label}</span>
+                  <span className="nav-icon">{cat.icon || "📁"}</span>
+                  <span className="nav-label">{cat.name}</span>
                 </div>
-                <span className="nav-count">{count}</span>
+                <div className="nav-item-right">
+                  <span className="nav-count">{count}</span>
+                  {!cat.isPreset && (
+                    <span
+                      className="btn-del-category"
+                      title="删除该自定义分类"
+                      onClick={(e) => void handleDeleteCategory(cat, e)}
+                    >
+                      ×
+                    </span>
+                  )}
+                </div>
               </button>
             );
           })}
@@ -203,7 +305,7 @@ export const ManagerApp: React.FC = () => {
               className="side-action-btn reset-btn"
               onClick={handleResetPresets}
             >
-              🔄 恢复 22 套官方预设
+              🔄 恢复 3 套官方预设
             </button>
           </div>
           <div className="version-info">PromptCraft v0.0.1 · 纯本地隐私安全</div>
@@ -249,91 +351,75 @@ export const ManagerApp: React.FC = () => {
             <span>
               当前展示 <b>{filteredSkills.length}</b> 套技能
             </span>
-            <span className="tips-text">
-              网页聊天框打 <code>/</code> 即可快速联想呼出
-            </span>
+            <span className="info-tip">网页聊天框打 <b>/</b> 即可快速联想呼出</span>
           </div>
 
           {filteredSkills.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">📭</div>
-              <div className="empty-title">未找到匹配的技能资产</div>
-              <p>可以尝试切换分类标签或点击上方“+ 新建技能”创建你的专属工作流</p>
+              <div className="empty-title">当前分类暂无匹配的技能</div>
+              <div className="empty-desc">您可以点击右上角「+ 新建技能」创建或使用向导生成</div>
             </div>
           ) : (
             <div className="skills-grid">
               {filteredSkills.map((skill) => {
                 const vars = extractVariables(skill.template);
+                const isCopied = copiedId === skill.id;
+
                 return (
                   <div key={skill.id} className="skill-card">
                     <div className="card-top">
-                      <div className="card-badge-row">
-                        <span className="card-cmd">{skill.shortcut}</span>
-                        {skill.isPreset && (
-                          <span className="preset-badge">官方预设</span>
-                        )}
-                        <span className="cat-badge">{skill.category}</span>
-                      </div>
-                      <h3 className="card-title">{skill.title}</h3>
-                      <p className="card-desc">{skill.description}</p>
-                    </div>
-
-                    <div className="card-middle">
-                      <div className="tags-row">
-                        {skill.tags.map((t) => (
-                          <span key={t} className="tag-chip">
-                            #{t}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="var-count-indicator">
-                        {vars.length === 0 ? (
-                          <span className="var-none">⚡ 无变量 · 即刻直接注入</span>
-                        ) : (
-                          <span className="var-has">
-                            📝 包含 {vars.length} 个自适应变量：
-                            {vars.map((v) => v.label).join("、")}
-                          </span>
-                        )}
+                      <div className="card-badges">
+                        <span className="badge-shortcut">{skill.shortcut}</span>
+                        {skill.isPreset && <span className="badge-preset">官方预设</span>}
+                        <span className="badge-category">{skill.category}</span>
                       </div>
                     </div>
 
-                    <div className="card-bottom">
-                      <div className="card-actions-left">
+                    <h3 className="card-title">{skill.title}</h3>
+                    <p className="card-desc">{skill.description || "暂无描述"}</p>
+
+                    <div className="card-tags">
+                      {skill.tags.map((tag, i) => (
+                        <span key={i} className="tag-item">#{tag}</span>
+                      ))}
+                    </div>
+
+                    {vars.length > 0 && (
+                      <div className="card-vars-hint">
+                        🧩 包含 {vars.length} 个自适应变量：{vars.map((v) => v.label).join("、")}
+                      </div>
+                    )}
+
+                    <div className="card-footer">
+                      <div className="card-footer-left">
                         <button
-                          className={`btn-card-copy ${
-                            copiedId === skill.id ? "copied" : ""
-                          }`}
+                          className={`btn-card-action ${isCopied ? "copied" : ""}`}
                           onClick={() => handleCopyTemplate(skill)}
-                          title="复制完整提示词模板到剪贴板"
                         >
-                          {copiedId === skill.id ? "已复制 ✓" : "复制模板"}
+                          {isCopied ? "✓ 已复制" : "复制模板"}
                         </button>
                         <button
-                          className="btn-card-secondary"
+                          className="btn-card-action"
                           onClick={() => handleExportMarkdown(skill)}
-                          title="导出为 .md 文件 (含 Frontmatter)"
                         >
                           导出 .md
                         </button>
                       </div>
 
-                      <div className="card-actions-right">
+                      <div className="card-footer-right">
                         <button
-                          className="btn-card-edit"
+                          className="btn-icon-action edit"
                           onClick={() => {
                             setEditingSkill(skill);
                             setIsEditorOpen(true);
                           }}
-                          title="编辑技能"
                         >
                           编辑
                         </button>
                         <button
-                          className="btn-card-delete"
+                          className="btn-icon-action delete"
                           onClick={() => handleDeleteSkill(skill.id, skill.title)}
-                          title="删除技能"
                         >
                           删除
                         </button>
@@ -351,6 +437,7 @@ export const ManagerApp: React.FC = () => {
       {isEditorOpen && (
         <SkillEditor
           initialSkill={editingSkill}
+          categories={categories}
           onSave={handleSaveSkill}
           onCancel={() => {
             setIsEditorOpen(false);
@@ -368,7 +455,7 @@ export const ManagerApp: React.FC = () => {
               id: `skill-${Date.now()}`,
               title: title || "智能构建技能",
               shortcut: shortcut || "/custom",
-              category: "custom",
+              category: categories[0]?.name || "编程开发",
               description: description || "通过向导生成的技能",
               tags: ["构建向导"],
               template,

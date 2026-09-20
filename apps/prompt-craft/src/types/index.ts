@@ -19,15 +19,16 @@ export interface SkillVariable {
 }
 
 /**
- * 技能分类
+ * 技能分类：支持用户完全自由新建与动态管理
  */
-export type SkillCategory =
-  | "all"
-  | "office" // 职场办公
-  | "coding" // 编程开发
-  | "writing" // 文案创作
-  | "learning" // 学术研读
-  | "custom"; // 用户自定义
+export type SkillCategory = string;
+
+export interface CategoryItem {
+  id: string;
+  name: string;
+  icon?: string;
+  isPreset?: boolean;
+}
 
 /**
  * 技能 (Skill / Prompt) 数据模型

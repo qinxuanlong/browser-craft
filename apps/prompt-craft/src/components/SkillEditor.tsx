@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Skill, SkillCategory } from "../types";
+import { Skill, SkillCategory, CategoryItem } from "../types";
 import { extractVariables } from "../services/variableParser";
 
 interface SkillEditorProps {
   initialSkill?: Skill | null;
+  categories?: CategoryItem[];
   onSave: (skill: Skill) => void;
   onCancel: () => void;
   onOpenBuilder: () => void;
@@ -11,6 +12,7 @@ interface SkillEditorProps {
 
 export const SkillEditor: React.FC<SkillEditorProps> = ({
   initialSkill,
+  categories = [],
   onSave,
   onCancel,
   onOpenBuilder,
@@ -18,8 +20,10 @@ export const SkillEditor: React.FC<SkillEditorProps> = ({
   const [title, setTitle] = useState(initialSkill?.title || "");
   const [shortcut, setShortcut] = useState(initialSkill?.shortcut || "/");
   const [category, setCategory] = useState<SkillCategory>(
-    initialSkill?.category || "office"
+    initialSkill?.category || (categories[0]?.name || "编程开发")
   );
+  const [isCreatingNewCategory, setIsCreatingNewCategory] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
   const [description, setDescription] = useState(initialSkill?.description || "");
   const [tagsStr, setTagsStr] = useState((initialSkill?.tags || []).join(", "));
   const [template, setTemplate] = useState(initialSkill?.template || "");
@@ -48,11 +52,16 @@ export const SkillEditor: React.FC<SkillEditorProps> = ({
       .map((t) => t.trim())
       .filter(Boolean);
 
+    const finalCategory =
+      isCreatingNewCategory && newCatName.trim()
+        ? newCatName.trim()
+        : category.trim() || "编程开发";
+
     const savedSkill: Skill = {
       id: initialSkill?.id || `skill-${Date.now()}`,
       title: title.trim(),
       shortcut: finalShortcut,
-      category,
+      category: finalCategory,
       description: description.trim(),
       tags: tags.length > 0 ? tags : ["通用"],
       template,
@@ -114,17 +123,81 @@ export const SkillEditor: React.FC<SkillEditorProps> = ({
             </div>
 
             <div className="form-group flex-1">
-              <label>所属分类</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as SkillCategory)}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "4px",
+                }}
               >
-                <option value="office">💼 职场办公</option>
-                <option value="coding">💻 编程开发</option>
-                <option value="writing">✍️ 文案创作</option>
-                <option value="learning">📚 学术研读</option>
-                <option value="custom">🛠️ 自定义</option>
-              </select>
+                <label style={{ margin: 0 }}>所属分类</label>
+                {!isCreatingNewCategory ? (
+                  <button
+                    type="button"
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#2563eb",
+                      fontSize: "11px",
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                    onClick={() => setIsCreatingNewCategory(true)}
+                  >
+                    + 新建
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#64748b",
+                      fontSize: "11px",
+                      cursor: "pointer",
+                      padding: 0,
+                    }}
+                    onClick={() => setIsCreatingNewCategory(false)}
+                  >
+                    已有分类
+                  </button>
+                )}
+              </div>
+
+              {isCreatingNewCategory ? (
+                <input
+                  type="text"
+                  placeholder="输入新分类名称..."
+                  value={newCatName}
+                  onChange={(e) => {
+                    setNewCatName(e.target.value);
+                    setCategory(e.target.value.trim());
+                  }}
+                  autoFocus
+                />
+              ) : (
+                <select
+                  value={category}
+                  onChange={(e) => {
+                    if (e.target.value === "__NEW__") {
+                      setIsCreatingNewCategory(true);
+                    } else {
+                      setCategory(e.target.value);
+                    }
+                  }}
+                >
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.name}>
+                      {c.icon || "📁"} {c.name}
+                    </option>
+                  ))}
+                  {category && !categories.some((c) => c.name === category) && (
+                    <option value={category}>📁 {category}</option>
+                  )}
+                  <option value="__NEW__">+ 新建分类...</option>
+                </select>
+              )}
             </div>
           </div>
 
