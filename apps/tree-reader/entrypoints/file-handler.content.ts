@@ -1,7 +1,26 @@
-import { classifyFile } from "../src/services/fileClassifier";
-
 export default defineContentScript({
   matches: ["file:///*"],
+  includeGlobs: [
+    "*/*.md*",
+    "*/*.MD*",
+    "*/*.markdown*",
+    "*/*.MARKDOWN*",
+    "*/*.mdown*",
+    "*/*.mkd*",
+    "*/*.txt*",
+    "*/*.TXT*",
+    "*/*.text*",
+  ],
+  excludeGlobs: [
+    "*://*/*.html*",
+    "*://*/*.htm*",
+    "*://*/*.shtml*",
+    "*://*/*.xhtml*",
+    "file:///*/*.html*",
+    "file:///*/*.htm*",
+    "file:///*/*.shtml*",
+    "file:///*/*.xhtml*",
+  ],
   runAt: "document_idle",
   main() {
     // 仅在本地文件协议下运行
@@ -11,20 +30,23 @@ export default defineContentScript({
     const fileName = decodeURIComponent(rawName);
     if (!fileName) return;
 
-    // 检查是否为支持的文本或代码文件
-    const { category } = classifyFile(fileName);
-    const preElement = document.querySelector("pre");
-    const isChromeTextPage =
-      preElement !== null &&
-      (document.body.children.length === 1 ||
-        document.body.children[0] === preElement);
+    // 仅支持查看 md 与 txt 文件，其他所有文件类型一律过滤排除，不主动弹窗或跳转
+    const ext = fileName.split(".").pop()?.toLowerCase() || "";
+    const isSupported = [
+      "md",
+      "markdown",
+      "mdown",
+      "mkd",
+      "txt",
+      "text",
+    ].includes(ext);
 
-    // 如果既不是已知文本后缀，且不是 Chrome 原生纯文本容器，则不介入（如本地图片、音视频、PDF 等）
-    if (category === "unknown" && !isChromeTextPage) {
+    if (!isSupported) {
       return;
     }
 
     // 提取文本内容
+    const preElement = document.querySelector("pre");
     const textContent = preElement
       ? preElement.textContent || ""
       : document.body?.innerText || "";
