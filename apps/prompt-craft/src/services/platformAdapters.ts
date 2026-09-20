@@ -179,3 +179,170 @@ export function detectActiveInputElement(): HTMLElement | null {
 
   return null;
 }
+
+/**
+ * 智能合成技能预设与用户具体输入内容
+ */
+export function composePromptWithSkills(skills: any[], userInput: string): string {
+  if (!skills || skills.length === 0) {
+    return userInput;
+  }
+
+  const trimmedInput = userInput ? userInput.trim() : "";
+
+  // 1. 若仅挂载了单个技能，且该技能模板中含有标准输入占位符（如 {{待测试的目标代码}} 或 {{input}} 等）
+  if (skills.length === 1 && trimmedInput) {
+    const single = skills[0];
+    const template = single.template;
+    const varMatches = template.match(/\{\{([^}]+)\}\}/g);
+
+    // 如果只有一个变量占位符，直接将用户输入填充到该占位符中
+    if (varMatches && varMatches.length === 1) {
+      return template.replace(varMatches[0], trimmedInput);
+    }
+  }
+
+  // 2. 多技能或无单一占位符时，构建标准角色人设与任务输入结构
+  const skillSections = skills.map((s, idx) => {
+    const skillTitle = s.title || s.name || "技能";
+    const header = skills.length > 1 ? `### 【生效技能 ${idx + 1}：${skillTitle}】` : `### 【生效指令预设：${skillTitle}】`;
+    return `${header}\n${s.template.trim()}`;
+  }).join("\n\n---\n\n");
+
+  if (!trimmedInput) {
+    return skillSections;
+  }
+
+  return `${skillSections}\n\n====================\n### 【用户任务与补充输入】\n${trimmedInput}`;
+}
+
+/**
+ * 获取输入框当前的文本内容
+ */
+export function getInputValue(element: HTMLElement): string {
+  if (
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLInputElement
+  ) {
+    return element.value;
+  }
+  if (element.isContentEditable || element.getAttribute("contenteditable") === "true") {
+    return element.innerText || element.textContent || "";
+  }
+  return "";
+}
+
+/**
+ * 设置输入框文本并派发响应事件
+ */
+export function setInputValue(element: HTMLElement, text: string): boolean {
+  try {
+    element.focus();
+
+    if (
+      element instanceof HTMLTextAreaElement ||
+      element instanceof HTMLInputElement
+    ) {
+      setNativeValue(element, text);
+      element.dispatchEvent(
+        new InputEvent("input", {
+          bubbles: true,
+          cancelable: true,
+          inputType: "insertText",
+          data: text,
+        })
+      );
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+      element.setSelectionRange(text.length, text.length);
+      element.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true }));
+      return true;
+    }
+
+    if (element.isContentEditable || element.getAttribute("contenteditable") === "true") {
+      element.innerText = text;
+      element.dispatchEvent(new Event("input", { bubbles: true }));
+      element.dispatchEvent(new Event("change", { bubbles: true }));
+      return true;
+    }
+
+    return false;
+  } catch (err) {
+    console.error("设置输入框内容失败:", err);
+    return false;
+  }
+}
+
+/**
+ * 探测与当前输入框相关的“发送”按钮
+ */
+export function findSendButton(inputElement: HTMLElement): HTMLElement | null {
+  // 1. 向上寻找所在的父表单或容器卡片 (最多往上找 6 层)
+  let container: HTMLElement | null = inputElement;
+  for (let i = 0; i < 6; i++) {
+    if (!container || !container.parentElement || container.tagName === "BODY") break;
+    container = container.parentElement;
+
+    // 在容器内查找发送按钮特征
+    const candidates = container.querySelectorAll<HTMLElement>(
+      "button, [role='button'], div[data-testid*='send'], div[aria-label*='发送'], div[aria-label*='Send']"
+    );
+
+    for (const btn of Array.from(candidates)) {
+      // 忽略已禁用的按钮
+      if (btn.hasAttribute("disabled") || btn.getAttribute("aria-disabled") === "true") {
+        continue;
+      }
+
+      // 文本或属性匹配
+      const aria = (btn.getAttribute("aria-label") || "").toLowerCase();
+      const testId = (btn.getAttribute("data-testid") || "").toLowerCase();
+      const title = (btn.getAttribute("title") || "").toLowerCase();
+      const text = (btn.innerText || "").trim().toLowerCase();
+
+      if (
+        aria.includes("发送") ||
+        aria.includes("send") ||
+        testId.includes("send") ||
+        title.includes("发送") ||
+        title.includes("send") ||
+        text === "发送" ||
+        text === "send"
+      ) {
+        return btn;
+      }
+
+      // SVG 图标匹配（包含飞机、向上箭头或发送路径）
+      const svg = btn.querySelector("svg");
+      if (svg) {
+        const svgHtml = svg.outerHTML.toLowerCase();
+        if (
+          svgHtml.includes("arrow") ||
+          svgHtml.includes("send") ||
+          svgHtml.includes("plane") ||
+          svgHtml.includes("up")
+        ) {
+          return btn;
+        }
+      }
+    }
+  }
+
+  // 2. 全局选择器兜底
+  const fallbackSelectors = [
+    "#chat-input ~ button",
+    "button[data-testid='send-button']",
+    "button[aria-label='发送']",
+    "button[aria-label='Send message']",
+    "button[aria-label='Send prompt']",
+  ];
+
+  for (const sel of fallbackSelectors) {
+    const el = document.querySelector<HTMLElement>(sel);
+    if (el && !el.hasAttribute("disabled")) {
+      return el;
+    }
+  }
+
+  return null;
+}
+
